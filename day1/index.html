@@ -914,9 +914,12 @@
       minutesForHour(hourSelect.value).forEach(function (mm) {
         const opt = document.createElement('option');
         opt.value = mm;
-        const full = slotFull(date, hourSelect.value, mm);
+        const used = cupsInSlot(date, hourSelect.value + ':' + mm);
+        const full = used >= MAX_CUPS_PER_SLOT;
         opt.disabled = full;
-        opt.textContent = mm + '분' + (full ? ' · 예약 마감' : '');
+        // 예약 현황 숫자: 비어 있으면 깔끔하게, 일부 차면 (n/3), 다 차면 마감
+        opt.textContent = mm + '분' +
+          (full ? ' · 예약 마감' : (used > 0 ? ' (' + used + '/' + MAX_CUPS_PER_SLOT + ')' : ''));
         minSelect.appendChild(opt);
       });
       const keep = [].find.call(minSelect.options, function (o) { return o.value === prev && !o.disabled; });

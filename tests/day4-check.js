@@ -101,6 +101,13 @@ async function overflowCheck(page) {
   const blocked = dialogs.some((d) => d.type === 'alert' && d.msg.includes('가득'));
   log('C5 슬롯 상한: 10분당 3잔 초과 차단', blocked && (await getStore(page)).bookings.length === 1);
 
+  // C5-1. 슬롯 현황 숫자: 08:20에 1잔 → "20분 (1/3)" 표기 + 선택 가능
+  await page.selectOption('#timeHour', '08');
+  const optPartial = await page.locator('#timeMin option[value="20"]').innerText();
+  const partialEnabled = !(await page.locator('#timeMin option[value="20"]').evaluate((o) => o.disabled));
+  log('C5-1 슬롯 현황: 일부 예약 시 (n/3) 숫자 표시 + 선택 가능',
+    optPartial.includes('(1/3)') && partialEnabled, `라벨="${optPartial}"`);
+
   // C6. 내 예약 확인 — 없는 예약
   await page.click('#lookupToggle');
   await page.fill('#lookupName', '없는사람');
