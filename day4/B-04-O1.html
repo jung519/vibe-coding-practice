@@ -887,24 +887,49 @@
     renderDateOptions();
 
     // ── 픽업 시간: 시(08~10)·분(10분 단위) 분리 선택. 10시는 00분만. ──
-    function renderMinOptions() {
-      const isLastHour = hourSelect.value === '10';
+    // 슬롯이 가득 찬(3잔) 시간은 처음부터 '예약 마감'으로 표시하고 선택 불가 처리한다.
+    function minutesForHour(h) {
+      return h === '10' ? ['00'] : ['00', '10', '20', '30', '40', '50'];
+    }
+    function slotFull(date, hh, mm) {
+      return cupsInSlot(date, hh + ':' + mm) >= MAX_CUPS_PER_SLOT;
+    }
+    function refreshTimeOptions() {
+      const date = dateSelect.value;
+
+      // 시(hour): 그 시간대의 모든 분이 마감이면 시 자체를 비활성화
+      [].forEach.call(hourSelect.options, function (opt) {
+        const full = minutesForHour(opt.value).every(function (mm) { return slotFull(date, opt.value, mm); });
+        opt.disabled = full;
+        opt.textContent = opt.value + '시' + (full ? ' · 마감' : '');
+      });
+      if (hourSelect.selectedOptions[0] && hourSelect.selectedOptions[0].disabled) {
+        const okHour = [].find.call(hourSelect.options, function (o) { return !o.disabled; });
+        if (okHour) hourSelect.value = okHour.value;
+      }
+
+      // 분(minute): 마감 슬롯은 disabled + '예약 마감' 라벨
       const prev = minSelect.value;
       minSelect.innerHTML = '';
-      const minutes = isLastHour ? [0] : [0, 10, 20, 30, 40, 50];
-      minutes.forEach(function (m) {
-        const mm = String(m).padStart(2, '0');
+      minutesForHour(hourSelect.value).forEach(function (mm) {
         const opt = document.createElement('option');
         opt.value = mm;
-        opt.textContent = mm + '분';
+        const full = slotFull(date, hourSelect.value, mm);
+        opt.disabled = full;
+        opt.textContent = mm + '분' + (full ? ' · 예약 마감' : '');
         minSelect.appendChild(opt);
       });
-      if ([].some.call(minSelect.options, function (o) { return o.value === prev; })) {
+      const keep = [].find.call(minSelect.options, function (o) { return o.value === prev && !o.disabled; });
+      if (keep) {
         minSelect.value = prev;
+      } else {
+        const okMin = [].find.call(minSelect.options, function (o) { return !o.disabled; });
+        if (okMin) minSelect.value = okMin.value;
       }
     }
-    hourSelect.addEventListener('change', renderMinOptions);
-    renderMinOptions();
+    hourSelect.addEventListener('change', refreshTimeOptions);
+    dateSelect.addEventListener('change', refreshTimeOptions);
+    refreshTimeOptions();
 
     // ── 수량 스테퍼: 1~3잔 ──
     let qty = 1;
@@ -1020,7 +1045,7 @@
         form.reset();
         qty = 1; qtyValueEl.textContent = qty;
         renderDateOptions();
-        renderMinOptions();
+        refreshTimeOptions(); // 방금 예약으로 마감된 슬롯 즉시 반영
         submitBtn.disabled = false;
         submitBtn.textContent = '📝 픽업 예약하기';
         refreshLookup(); // 조회 패널이 열려 있으면 갱신
@@ -1111,6 +1136,7 @@
             b.status = '취소';
             b.updatedAt = nowISO();
             saveBookings();
+            refreshTimeOptions(); // 취소로 반납된 슬롯 즉시 반영
             renderLookup(nm, ph);
           });
           card.appendChild(cancelBtn);

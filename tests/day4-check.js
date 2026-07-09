@@ -140,6 +140,18 @@ async function overflowCheck(page) {
   await addBooking(page, '박반납', '010-7777-8888', { hour: '08', min: '20', qty: 3 });
   log('C9 슬롯 반납: 취소 후 같은 슬롯 3잔 예약 가능', (await getStore(page)).bookings.length === 2);
 
+  // C9-1. 마감 슬롯 표시: 08:20에 3잔 찼으므로 옵션 disabled + '예약 마감' 라벨 + 선택 불가
+  await page.selectOption('#timeHour', '08');
+  const opt20 = page.locator('#timeMin option[value="20"]');
+  const optDisabled = await opt20.evaluate((o) => o.disabled);
+  const optLabel = await opt20.innerText();
+  let selectBlocked = false;
+  try { await page.selectOption('#timeMin', '20', { timeout: 1200 }); } catch (e) { selectBlocked = true; }
+  const minNow = await page.inputValue('#timeMin');
+  log('C9-1 마감 슬롯: disabled + 예약 마감 라벨 + 선택 차단',
+    optDisabled && optLabel.includes('예약 마감') && selectBlocked && minNow !== '20',
+    `라벨="${optLabel}", 선택차단=${selectBlocked}, 현재값=${minNow}`);
+
   // C10. 관리자 페이지 이동 (토스트 → 자동 이동)
   await page.click('#adminLink');
   const toastText = await page.locator('#toast').innerText();
