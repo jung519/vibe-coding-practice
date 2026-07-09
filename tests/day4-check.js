@@ -1,7 +1,7 @@
 // Day4 자동 점검 — B-04-O1 (localStorage 영속화 + CRUD), 375px 모바일 뷰포트
 const { chromium } = require('playwright-core');
 
-const PAGE = 'file:///Users/junghyun/Project/kaist/day4/B-04-O1.html';
+const PAGE = 'file:///Users/junghyun/Project/kaist/day1/index.html'; // 통합 페이지(저장 기능 반영)
 const KEY = 'morningbrew.bookings';
 
 const results = [];
