@@ -294,6 +294,78 @@
       color: #fff;
       font-weight: 700;
     }
+
+    /* ── 내 예약 확인 ── */
+    .btn-lookup {
+      display: block;
+      width: 100%;
+      margin-top: 14px;
+      padding: 15px 24px;
+      border: 1.5px solid #d9c8b4;
+      border-radius: 12px;
+      background: #fff;
+      color: #5c3d2e;
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .btn-lookup:active { transform: scale(0.97); }
+    .lookup-panel {
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      margin-top: 14px;
+      box-shadow: 0 2px 12px rgba(92, 61, 46, 0.08);
+    }
+    .lookup-note {
+      font-size: 0.78rem;
+      color: #a08a70;
+      margin-top: 12px;
+      text-align: center;
+    }
+    .lookup-results { margin-top: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .btn-cancel-booking {
+      background: none;
+      border: 1.5px solid #e8ddd0;
+      color: #b0a090;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.82rem;
+      font-family: inherit;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .btn-cancel-booking:hover { border-color: #d9534f; color: #d9534f; }
+
+    /* ── 관리자 버튼 + 토스트 ── */
+    .btn-admin {
+      background: none;
+      border: 1px solid #e0d5c5;
+      color: #b0a090;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 0.8rem;
+      font-family: inherit;
+      cursor: pointer;
+      margin-bottom: 12px;
+    }
+    .btn-admin:hover { color: #5c3d2e; border-color: #c4713b; }
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 36px;
+      transform: translateX(-50%);
+      background: #3b2f2f;
+      color: #fff;
+      padding: 13px 24px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+      z-index: 100;
+      white-space: nowrap;
+    }
     .empty-state {
       background: #fff;
       border: 1.5px dashed #e0d5c5;
@@ -644,13 +716,23 @@
       <div class="success-box" id="successBox"></div>
     </form>
 
-    <h3 class="list-title">예약 목록</h3>
-    <div class="date-tabs" id="bookingTabs"></div>
-    <div class="list-area" id="bookingList"></div>
-
-    <h3 class="list-title">완료 항목</h3>
-    <div class="date-tabs" id="doneTabs"></div>
-    <div class="list-area" id="doneList"></div>
+    <!-- 내 예약 확인: 이름+연락처로 본인 예약 조회 (예약 목록·완료 항목은 관리자 페이지로 이동) -->
+    <button type="button" class="btn-lookup" id="lookupToggle">🔍 내 예약 확인</button>
+    <div class="lookup-panel" id="lookupPanel" hidden>
+      <div class="field-row">
+        <div class="field">
+          <label for="lookupName">이름</label>
+          <input type="text" id="lookupName" placeholder="예약자 이름">
+        </div>
+        <div class="field">
+          <label for="lookupPhone">연락처</label>
+          <input type="tel" id="lookupPhone" placeholder="010-0000-0000" inputmode="numeric" autocomplete="tel">
+        </div>
+      </div>
+      <button type="button" class="btn-submit" id="lookupRun">조회하기</button>
+      <div class="lookup-results" id="lookupResults"></div>
+      <p class="lookup-note">확정된 예약의 변경·취소는 전화(02-123-4567)로 문의해 주세요.</p>
+    </div>
   </section>
 
   <!-- 특징 -->
@@ -707,8 +789,11 @@
   </section>
 
   <footer>
+    <button type="button" class="btn-admin" id="adminLink">관리자 페이지</button><br>
     &copy; 2026 모닝브루. All rights reserved.
   </footer>
+
+  <div class="toast" id="toast" hidden></div>
 
   <script>
     // ═══════════════════════════════════════════════════
@@ -755,10 +840,6 @@
     const MAX_CUPS_PER_SLOT = 3;
 
     const form = document.getElementById('bookingForm');
-    const listEl = document.getElementById('bookingList');
-    const doneListEl = document.getElementById('doneList');
-    const bookingTabs = document.getElementById('bookingTabs');
-    const doneTabs = document.getElementById('doneTabs');
     const hourSelect = document.getElementById('timeHour');
     const minSelect = document.getElementById('timeMin');
     const dateSelect = document.getElementById('pickupDate');
@@ -942,7 +1023,7 @@
         renderMinOptions();
         submitBtn.disabled = false;
         submitBtn.textContent = '📝 픽업 예약하기';
-        render();
+        refreshLookup(); // 조회 패널이 열려 있으면 갱신
       }, 800);
     });
 
@@ -956,147 +1037,111 @@
       render();
     }
 
-    // 삭제 가능 여부: 확정·픽업완료 단계부터는 삭제 불가 (접수·취소만 삭제 가능)
-    function isDeletable(b) {
-      return b.status === '접수' || b.status === '취소';
+    // ══════════════ 내 예약 확인 (고객용 조회·취소) ══════════════
+    const lookupToggle = document.getElementById('lookupToggle');
+    const lookupPanel = document.getElementById('lookupPanel');
+    const lookupName = document.getElementById('lookupName');
+    const lookupPhone = document.getElementById('lookupPhone');
+    const lookupRun = document.getElementById('lookupRun');
+    const lookupResults = document.getElementById('lookupResults');
+    let lastLookup = null; // 마지막 조회 조건 (취소·신규 예약 후 갱신용)
+
+    lookupPhone.addEventListener('input', function () {
+      lookupPhone.value = formatPhone(lookupPhone.value);
+    });
+
+    lookupToggle.addEventListener('click', function () {
+      lookupPanel.hidden = !lookupPanel.hidden;
+      if (!lookupPanel.hidden) lookupPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+
+    function lookupMsg(emoji, html) {
+      lookupResults.innerHTML =
+        '<div class="empty-state"><span class="emoji">' + emoji + '</span>' + html + '</div>';
     }
 
-    // ── [D] 삭제: confirm 확인 후 제거 ──
-    function removeBooking(id) {
-      const target = bookings.find(function (b) { return b.id === id; });
-      if (!target) return;
-      // 방어선: 버튼 비활성화를 우회해도 여기서 차단
-      if (!isDeletable(target)) {
-        alert('⚠️ "' + target.status + '" 상태의 예약은 삭제할 수 없습니다.\n삭제하려면 먼저 상태를 "취소"로 변경해 주세요.');
+    function renderLookup(nm, ph) {
+      lookupResults.innerHTML = '';
+      const matches = bookings
+        .filter(function (b) { return b.name === nm && phoneDigits(b.phone) === ph; })
+        .sort(function (a, b) { return (a.pickupDate + a.time).localeCompare(b.pickupDate + b.time); });
+
+      if (matches.length === 0) {
+        lookupMsg('🔍', '입력하신 이름·연락처로 접수된 예약이 없어요.<br>이름과 연락처를 다시 확인해 주세요.');
         return;
       }
-      const ok = confirm(
-        '이 예약을 삭제할까요?\n\n' +
-        '👤 ' + target.name + ' · 📅 ' + target.pickupDate + ' ⏰ ' + target.time + '\n' +
-        '☕ ' + target.menu + ' × ' + target.qty
-      );
-      if (!ok) return;
-      bookings = bookings.filter(function (b) { return b.id !== id; });
-      saveBookings(); // [D] localStorage 반영
-      render();
-    }
 
-    // ── [R] 목록 그리기: 예약(진행)/완료 분리 + 날짜 탭 그룹핑 ──
-    let activeDateSel = null; // 예약 목록에서 선택된 날짜
-    let doneDateSel = null;   // 완료 항목에서 선택된 날짜
+      matches.forEach(function (b) {
+        const card = document.createElement('div');
+        card.className = 'booking-card';
 
-    function dateLabel(d) {
-      const p = d.split('-');
-      const dt = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
-      return Number(p[1]) + '/' + Number(p[2]) + ' (' + DAY_NAMES[dt.getDay()] + ')';
-    }
+        const info = document.createElement('div');
+        info.className = 'booking-info';
+        info.innerHTML =
+          '<div class="top">' +
+          '<span class="name"></span>' +
+          '<span class="time"></span>' +
+          '<span class="status-badge"></span>' +
+          '</div>' +
+          '<div class="menu"></div>' +
+          (b.note ? '<div class="note"></div>' : '');
+        info.querySelector('.name').textContent = b.name;
+        info.querySelector('.time').textContent = b.pickupDate.slice(5).replace('-', '/') + ' ' + b.time;
+        const badge = info.querySelector('.status-badge');
+        badge.textContent = b.status;
+        badge.classList.add('status-' + b.status);
+        info.querySelector('.menu').textContent = b.menu + ' × ' + b.qty;
+        if (b.note) info.querySelector('.note').textContent = '요청: ' + b.note;
 
-    // 예약 카드 한 장 만들기 (두 섹션 공용)
-    function makeCard(b) {
-      const card = document.createElement('div');
-      card.className = 'booking-card';
+        card.appendChild(info);
 
-      const info = document.createElement('div');
-      info.className = 'booking-info';
-      info.innerHTML =
-        '<div class="top">' +
-        '<span class="name"></span>' +
-        '<span class="time"></span>' +
-        '<span class="status-badge"></span>' +
-        '</div>' +
-        '<div class="menu"></div>' +
-        (b.note ? '<div class="note"></div>' : '');
-      info.querySelector('.name').textContent = b.name;
-      info.querySelector('.time').textContent = '픽업 ' + b.time; // 날짜는 탭이 알려주므로 시간만
-      const badge = info.querySelector('.status-badge');
-      badge.textContent = b.status;
-      badge.classList.add('status-' + b.status);
-      info.querySelector('.menu').textContent = b.menu + ' × ' + b.qty + ' · ' + formatPhone(b.phone);
-      if (b.note) info.querySelector('.note').textContent = '요청: ' + b.note;
+        // 접수 상태만 고객이 직접 취소 가능 (확정 이후는 전화 안내 — 하단 문구)
+        if (b.status === '접수') {
+          const cancelBtn = document.createElement('button');
+          cancelBtn.type = 'button';
+          cancelBtn.className = 'btn-cancel-booking';
+          cancelBtn.textContent = '예약 취소';
+          cancelBtn.addEventListener('click', function () {
+            const ok = confirm(
+              '이 예약을 취소할까요?\n\n' +
+              '📅 ' + b.pickupDate + ' ⏰ ' + b.time + '\n' +
+              '☕ ' + b.menu + ' × ' + b.qty
+            );
+            if (!ok) return;
+            b.status = '취소';
+            b.updatedAt = nowISO();
+            saveBookings();
+            renderLookup(nm, ph);
+          });
+          card.appendChild(cancelBtn);
+        }
 
-      const controls = document.createElement('div');
-      controls.className = 'booking-controls';
-
-      const statusSel = document.createElement('select');
-      statusSel.className = 'status-select';
-      STATUSES.forEach(function (s) {
-        const opt = document.createElement('option');
-        opt.value = s;
-        opt.textContent = s;
-        if (s === b.status) opt.selected = true;
-        statusSel.appendChild(opt);
+        lookupResults.appendChild(card);
       });
-      statusSel.addEventListener('change', function () { updateStatus(b.id, statusSel.value); });
+    }
 
-      const delWrap = document.createElement('div');
-      delWrap.className = 'del-wrap';
-      const del = document.createElement('button');
-      del.className = 'btn-delete';
-      del.textContent = '삭제';
-      del.disabled = !isDeletable(b); // 확정·픽업완료는 삭제 잠금
-      del.addEventListener('click', function () { removeBooking(b.id); });
-      delWrap.appendChild(del);
-      if (!isDeletable(b)) {
-        delWrap.classList.add('locked');
-        delWrap.setAttribute('data-tip', '확정 이후 취소 불가능');
+    lookupRun.addEventListener('click', function () {
+      const nm = lookupName.value.trim();
+      const ph = phoneDigits(lookupPhone.value);
+      if (!nm || !ph) {
+        lookupMsg('✍️', '이름과 연락처를 모두 입력해 주세요.');
+        return;
       }
+      lastLookup = { nm: nm, ph: ph };
+      renderLookup(nm, ph);
+    });
 
-      controls.appendChild(statusSel);
-      controls.appendChild(delWrap);
-      card.appendChild(info);
-      card.appendChild(controls);
-      return card;
+    function refreshLookup() {
+      if (!lookupPanel.hidden && lastLookup) renderLookup(lastLookup.nm, lastLookup.ph);
     }
 
-    // 한 섹션(탭 + 목록) 그리기: 날짜별 그룹 → 탭(월/일·건수) → 선택 날짜의 카드만
-    function renderSection(tabsEl, areaEl, items, selected, setSelected, emptyHtml) {
-      tabsEl.innerHTML = '';
-      areaEl.innerHTML = '';
-
-      if (items.length === 0) {
-        tabsEl.style.display = 'none';
-        areaEl.innerHTML = emptyHtml;
-        return null;
-      }
-
-      const groups = {};
-      items.forEach(function (b) {
-        (groups[b.pickupDate] = groups[b.pickupDate] || []).push(b);
-      });
-      const dates = Object.keys(groups).sort();
-      if (dates.indexOf(selected) === -1) selected = dates[0]; // 선택 날짜가 사라지면 첫 날짜로
-
-      tabsEl.style.display = 'flex';
-      dates.forEach(function (d) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'date-tab' + (d === selected ? ' active' : '');
-        btn.textContent = dateLabel(d) + ' · ' + groups[d].length + '건';
-        btn.addEventListener('click', function () { setSelected(d); render(); });
-        tabsEl.appendChild(btn);
-      });
-
-      groups[selected].slice()
-        .sort(function (a, b) { return a.time.localeCompare(b.time); })
-        .forEach(function (b) { areaEl.appendChild(makeCard(b)); });
-
-      return selected;
-    }
-
-    function render() {
-      const active = bookings.filter(function (b) { return b.status !== '픽업완료'; });
-      const done = bookings.filter(function (b) { return b.status === '픽업완료'; });
-
-      activeDateSel = renderSection(bookingTabs, listEl, active, activeDateSel,
-        function (d) { activeDateSel = d; },
-        '<div class="empty-state"><span class="emoji">🌅</span>아직 예약이 없어요.<br>첫 예약을 기다리고 있습니다!</div>');
-
-      doneDateSel = renderSection(doneTabs, doneListEl, done, doneDateSel,
-        function (d) { doneDateSel = d; },
-        '<div class="empty-state"><span class="emoji">📦</span>아직 완료된 픽업이 없어요.</div>');
-    }
-
-    render(); // [R] 첫 로드: localStorage에서 복원된 목록 표시
+    // ══════════════ 관리자 페이지 이동 (토스트 → 자동 이동) ══════════════
+    const toast = document.getElementById('toast');
+    document.getElementById('adminLink').addEventListener('click', function () {
+      toast.textContent = '관리자페이지로 이동합니다';
+      toast.hidden = false;
+      setTimeout(function () { location.href = 'admin.html'; }, 1000);
+    });
   </script>
 </body>
 </html>

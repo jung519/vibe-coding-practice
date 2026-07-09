@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>모닝브루 관리자 — 예약 관리</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #3b2f2f;
+      background: #faf8f5;
+      line-height: 1.6;
+    }
+
+    /* ── 헤더 ── */
+    .admin-header {
+      background: #5c3d2e;
+      color: #fff;
+      padding: 20px 24px;
+    }
+    .admin-header .inner {
+      max-width: 640px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .admin-header h1 { font-size: 1.15rem; font-weight: 700; }
+    .admin-header .sub { font-size: 0.78rem; opacity: 0.75; }
+    .back-link {
+      color: #f0e0d0;
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 8px;
+      padding: 7px 12px;
+      flex-shrink: 0;
+    }
+    .back-link:hover { background: rgba(255, 255, 255, 0.1); }
+
+    /* ── Section ── */
+    section { padding: 36px 24px; max-width: 640px; margin: 0 auto; }
+    .list-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #5c3d2e;
+      margin: 0 0 14px;
+    }
+    .list-area { display: flex; flex-direction: column; gap: 12px; }
+    .empty-state {
+      background: #fff;
+      border: 1.5px dashed #e0d5c5;
+      border-radius: 14px;
+      padding: 36px 20px;
+      text-align: center;
+      color: #b0a090;
+      font-size: 0.95rem;
+    }
+    .empty-state .emoji { font-size: 2rem; display: block; margin-bottom: 8px; }
+
+    /* ── 날짜 탭 ── */
+    .date-tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      margin-bottom: 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .date-tab {
+      flex-shrink: 0;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1.5px solid #e8ddd0;
+      background: #fff;
+      font-size: 0.85rem;
+      color: #6b5b50;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .date-tab.active {
+      background: #c4713b;
+      border-color: #c4713b;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    /* ── 예약 카드 ── */
+    .booking-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 18px 20px;
+      box-shadow: 0 2px 8px rgba(92, 61, 46, 0.06);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .booking-info { flex: 1; min-width: 0; }
+    .booking-info .top {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+    .booking-info .name { font-weight: 700; color: #5c3d2e; }
+    .booking-info .time {
+      background: #fdf8ee;
+      color: #a06030;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+    .booking-info .menu { font-size: 0.9rem; color: #6b5b50; }
+    .booking-info .note { font-size: 0.82rem; color: #b0a090; margin-top: 2px; }
+
+    .status-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+    .status-접수 { background: #fdf8ee; color: #a06030; }
+    .status-확정 { background: #eef7ee; color: #3a7a3a; }
+    .status-픽업완료 { background: #f0f0f0; color: #808080; }
+    .status-취소 { background: #fdeeee; color: #c0504d; }
+
+    .booking-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex-shrink: 0;
+      width: 96px;
+    }
+    .status-select {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1.5px solid #e8ddd0;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-family: inherit;
+      color: #5c3d2e;
+      background: #fffdfa;
+    }
+    .btn-delete {
+      background: none;
+      border: 1.5px solid #e8ddd0;
+      color: #b0a090;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.82rem;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .btn-delete:hover:not(:disabled) { border-color: #d9534f; color: #d9534f; }
+    .btn-delete:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    /* 삭제 잠금 툴팁(말풍선) */
+    .del-wrap { position: relative; }
+    .del-wrap .btn-delete { width: 100%; }
+    .del-wrap.locked:hover::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: calc(100% + 8px);
+      right: 0;
+      background: #3b2f2f;
+      color: #fff;
+      font-size: 0.72rem;
+      padding: 6px 10px;
+      border-radius: 8px;
+      white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+      z-index: 10;
+      pointer-events: none;
+    }
+    .del-wrap.locked:hover::before {
+      content: '';
+      position: absolute;
+      bottom: calc(100% + 2px);
+      right: 16px;
+      border: 6px solid transparent;
+      border-top-color: #3b2f2f;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 0.8rem;
+      color: #b0a090;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="admin-header">
+    <div class="inner">
+      <div>
+        <h1>☕ 모닝브루 관리자</h1>
+        <div class="sub">아침 픽업 예약 접수 현황</div>
+      </div>
+      <a class="back-link" href="B-04-O1.html">← 예약 페이지</a>
+    </div>
+  </header>
+
+  <section>
+    <h2 class="list-title">예약 목록</h2>
+    <div class="date-tabs" id="bookingTabs"></div>
+    <div class="list-area" id="bookingList"></div>
+  </section>
+
+  <section style="padding-top: 0;">
+    <h2 class="list-title">완료 항목</h2>
+    <div class="date-tabs" id="doneTabs"></div>
+    <div class="list-area" id="doneList"></div>
+  </section>
+
+  <footer>
+    모닝브루 관리자 화면 · 데이터는 이 브라우저(localStorage)에만 저장됩니다
+  </footer>
+
+  <script>
+    // 고객 페이지와 같은 저장소를 읽는다 (같은 도메인 = localStorage 공유)
+    const STORAGE_KEY = 'morningbrew.bookings';
+    const STATUSES = ['접수', '확정', '픽업완료', '취소'];
+    const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+
+    function nowISO() {
+      const d = new Date();
+      const off = -d.getTimezoneOffset();
+      const sign = off >= 0 ? '+' : '-';
+      const pad = function (n, w) { return String(Math.abs(n)).padStart(w || 2, '0'); };
+      return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+        'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()) +
+        '.' + pad(d.getMilliseconds(), 3) + sign + pad(Math.floor(off / 60)) + ':' + pad(off % 60);
+    }
+
+    function loadBookings() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return [];
+        const data = JSON.parse(raw);
+        if (data && data.version === 1 && Array.isArray(data.bookings)) return data.bookings;
+        return [];
+      } catch (e) {
+        return [];
+      }
+    }
+    function saveBookings() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, bookings: bookings }));
+    }
+    let bookings = loadBookings();
+
+    const listEl = document.getElementById('bookingList');
+    const doneListEl = document.getElementById('doneList');
+    const bookingTabs = document.getElementById('bookingTabs');
+    const doneTabs = document.getElementById('doneTabs');
+
+    function phoneDigits(v) { return String(v || '').replace(/\D/g, '').slice(0, 11); }
+    function formatPhone(v) {
+      const d = phoneDigits(v);
+      if (d.length <= 3) return d;
+      if (d.length <= 7) return d.slice(0, 3) + '-' + d.slice(3);
+      return d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7);
+    }
+
+    // 삭제 가능 여부: 확정·픽업완료 단계부터는 삭제 불가 (접수·취소만 가능)
+    function isDeletable(b) {
+      return b.status === '접수' || b.status === '취소';
+    }
+
+    // [U] 상태 변경
+    function updateStatus(id, newStatus) {
+      const target = bookings.find(function (b) { return b.id === id; });
+      if (!target || target.status === newStatus) return;
+      target.status = newStatus;
+      target.updatedAt = nowISO();
+      saveBookings();
+      render();
+    }
+
+    // [D] 삭제
+    function removeBooking(id) {
+      const target = bookings.find(function (b) { return b.id === id; });
+      if (!target) return;
+      if (!isDeletable(target)) {
+        alert('⚠️ "' + target.status + '" 상태의 예약은 삭제할 수 없습니다.\n삭제하려면 먼저 상태를 "취소"로 변경해 주세요.');
+        return;
+      }
+      const ok = confirm(
+        '이 예약을 삭제할까요?\n\n' +
+        '👤 ' + target.name + ' · 📅 ' + target.pickupDate + ' ⏰ ' + target.time + '\n' +
+        '☕ ' + target.menu + ' × ' + target.qty
+      );
+      if (!ok) return;
+      bookings = bookings.filter(function (b) { return b.id !== id; });
+      saveBookings();
+      render();
+    }
+
+    // ── [R] 목록 그리기: 예약(진행)/완료 분리 + 날짜 탭 그룹핑 ──
+    let activeDateSel = null;
+    let doneDateSel = null;
+
+    function dateLabel(d) {
+      const p = d.split('-');
+      const dt = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+      return Number(p[1]) + '/' + Number(p[2]) + ' (' + DAY_NAMES[dt.getDay()] + ')';
+    }
+
+    function makeCard(b) {
+      const card = document.createElement('div');
+      card.className = 'booking-card';
+
+      const info = document.createElement('div');
+      info.className = 'booking-info';
+      info.innerHTML =
+        '<div class="top">' +
+        '<span class="name"></span>' +
+        '<span class="time"></span>' +
+        '<span class="status-badge"></span>' +
+        '</div>' +
+        '<div class="menu"></div>' +
+        (b.note ? '<div class="note"></div>' : '');
+      info.querySelector('.name').textContent = b.name;
+      info.querySelector('.time').textContent = '픽업 ' + b.time;
+      const badge = info.querySelector('.status-badge');
+      badge.textContent = b.status;
+      badge.classList.add('status-' + b.status);
+      info.querySelector('.menu').textContent = b.menu + ' × ' + b.qty + ' · ' + formatPhone(b.phone);
+      if (b.note) info.querySelector('.note').textContent = '요청: ' + b.note;
+
+      const controls = document.createElement('div');
+      controls.className = 'booking-controls';
+
+      const statusSel = document.createElement('select');
+      statusSel.className = 'status-select';
+      STATUSES.forEach(function (s) {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        if (s === b.status) opt.selected = true;
+        statusSel.appendChild(opt);
+      });
+      statusSel.addEventListener('change', function () { updateStatus(b.id, statusSel.value); });
+
+      const delWrap = document.createElement('div');
+      delWrap.className = 'del-wrap';
+      const del = document.createElement('button');
+      del.className = 'btn-delete';
+      del.textContent = '삭제';
+      del.disabled = !isDeletable(b);
+      del.addEventListener('click', function () { removeBooking(b.id); });
+      delWrap.appendChild(del);
+      if (!isDeletable(b)) {
+        delWrap.classList.add('locked');
+        delWrap.setAttribute('data-tip', '확정 이후 취소 불가능');
+      }
+
+      controls.appendChild(statusSel);
+      controls.appendChild(delWrap);
+      card.appendChild(info);
+      card.appendChild(controls);
+      return card;
+    }
+
+    function renderSection(tabsEl, areaEl, items, selected, setSelected, emptyHtml) {
+      tabsEl.innerHTML = '';
+      areaEl.innerHTML = '';
+
+      if (items.length === 0) {
+        tabsEl.style.display = 'none';
+        areaEl.innerHTML = emptyHtml;
+        return null;
+      }
+
+      const groups = {};
+      items.forEach(function (b) {
+        (groups[b.pickupDate] = groups[b.pickupDate] || []).push(b);
+      });
+      const dates = Object.keys(groups).sort();
+      if (dates.indexOf(selected) === -1) selected = dates[0];
+
+      tabsEl.style.display = 'flex';
+      dates.forEach(function (d) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'date-tab' + (d === selected ? ' active' : '');
+        btn.textContent = dateLabel(d) + ' · ' + groups[d].length + '건';
+        btn.addEventListener('click', function () { setSelected(d); render(); });
+        tabsEl.appendChild(btn);
+      });
+
+      groups[selected].slice()
+        .sort(function (a, b) { return a.time.localeCompare(b.time); })
+        .forEach(function (b) { areaEl.appendChild(makeCard(b)); });
+
+      return selected;
+    }
+
+    function render() {
+      const active = bookings.filter(function (b) { return b.status !== '픽업완료'; });
+      const done = bookings.filter(function (b) { return b.status === '픽업완료'; });
+
+      activeDateSel = renderSection(bookingTabs, listEl, active, activeDateSel,
+        function (d) { activeDateSel = d; },
+        '<div class="empty-state"><span class="emoji">🌅</span>아직 예약이 없어요.</div>');
+
+      doneDateSel = renderSection(doneTabs, doneListEl, done, doneDateSel,
+        function (d) { doneDateSel = d; },
+        '<div class="empty-state"><span class="emoji">📦</span>아직 완료된 픽업이 없어요.</div>');
+    }
+
+    render();
+  </script>
+</body>
+</html>

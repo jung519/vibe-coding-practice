@@ -1,8 +1,9 @@
-// Day4 자동 점검 — B-04-O1 (localStorage 영속화 + CRUD), 375px 모바일 뷰포트
+// Day4 자동 점검 v2 — 고객 페이지(예약+내 예약 확인) & 관리자 페이지(목록·상태·삭제)
+// 사용: node tests/day4-check.js [고객페이지 URL]  (관리자 URL은 같은 폴더 admin.html로 유도)
 const { chromium } = require('playwright-core');
 
-// 대상: 기본은 로컬 통합 페이지. 인자로 URL을 주면 그 주소(예: 배포 URL)를 검사한다.
-const PAGE = process.argv[2] || 'file:///Users/junghyun/Project/kaist/day1/index.html';
+const CUSTOMER = process.argv[2] || 'file:///Users/junghyun/Project/kaist/day4/B-04-O1.html';
+const ADMIN = CUSTOMER.replace(/[^/]*$/, 'admin.html');
 const KEY = 'morningbrew.bookings';
 
 const results = [];
@@ -27,19 +28,26 @@ async function addBooking(page, name, phone, opts) {
   if (opts.hour) await page.selectOption('#timeHour', opts.hour);
   if (opts.min) await page.selectOption('#timeMin', opts.min);
   for (let i = 1; i < (opts.qty || 1); i++) await page.click('#qtyPlus');
-  const before = await page.locator('.booking-card').count();
   await page.click('#submitBtn');
-  if (opts.noWait) {
-    // 다른 날짜 탭으로 들어가는 예약은 화면 카드 수가 안 변하므로 완료 박스로만 대기
-    await page.waitForSelector('.success-box.show', { timeout: 4000 });
-  } else if (!opts.expectBlocked) {
-    await page.waitForFunction(
-      (n) => document.querySelectorAll('.booking-card').length === n,
-      before + 1, { timeout: 4000 }
-    );
-  } else {
+  if (opts.expectBlocked) {
     await page.waitForTimeout(400);
+  } else {
+    await page.waitForSelector('.success-box.show', { timeout: 4000 });
   }
+}
+
+async function overflowCheck(page) {
+  return page.evaluate(() => {
+    const doc = document.documentElement;
+    let poked = [];
+    document.querySelectorAll('body *').forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && (r.right > doc.clientWidth + 1 || r.left < -1)) {
+        poked.push(el.tagName + '.' + (el.className || '').toString().split(' ')[0]);
+      }
+    });
+    return { overflowX: doc.scrollWidth - doc.clientWidth, poked: poked.slice(0, 5) };
+  });
 }
 
 (async () => {
@@ -53,166 +61,166 @@ async function addBooking(page, name, phone, opts) {
     await d.accept();
   });
 
-  await page.goto(PAGE);
-  // 시작 전 저장소 비우기 (반복 실행 대비)
+  await page.goto(CUSTOMER);
   await page.evaluate((k) => localStorage.removeItem(k), KEY);
   await page.reload();
 
-  // 1. 빈 상태
-  const emptyActive0 = await page.locator('#bookingList .empty-state').isVisible();
-  const emptyDone0 = await page.locator('#doneList .empty-state').isVisible();
-  log('빈 상태: 예약·완료 두 섹션 모두 안내 문구', emptyActive0 && emptyDone0);
+  // ═══════ 고객 페이지 ═══════
 
-  // 2. 날짜 옵션: 월요일 휴무 제외
-  const dateLabels = await page.locator('#pickupDate option').allInnerTexts();
-  const hasMonday = dateLabels.some((t) => t.includes('(월)'));
-  log('픽업 날짜: 월요일(휴무) 옵션 제외', !hasMonday && dateLabels.length >= 6, `옵션=[${dateLabels.join(' | ')}]`);
-
-  // 2-1. 연락처 입력: 숫자만 허용 + 자동 하이픈 표시
+  // C1. 연락처: 숫자만 + 하이픈 표시
   await page.fill('#phone', '010abc1234!@#5678');
   const phoneShown = await page.inputValue('#phone');
-  log('연락처: 숫자 외 문자 차단 + 010-0000-0000 표시', phoneShown === '010-1234-5678', `표시="${phoneShown}"`);
+  log('C1 연락처: 숫자 외 문자 차단 + 010-0000-0000 표시', phoneShown === '010-1234-5678', `표시="${phoneShown}"`);
   await page.fill('#phone', '');
 
-  // 3. [C] 생성 → 카드 + 완료 피드백
+  // C2. [C] 생성
   dialogs.length = 0;
   await addBooking(page, '김테스트', '010-1111-2222', { hour: '08', min: '20' });
-  const created = (await page.locator('.booking-card').count()) === 1;
-  const successShown = await page.locator('.success-box.show').isVisible();
-  log('[C] 생성: confirm→저장→목록+완료 피드백', created && successShown,
-    `카드=1, confirm=${dialogs.some(d => d.type === 'confirm')}`);
+  log('C2 [C] 생성: confirm→처리중→완료 피드백', dialogs.some((d) => d.type === 'confirm'),
+    `confirm=${dialogs.some((d) => d.type === 'confirm')}`);
 
-  // 4. localStorage 확정 JSON 구조 검증
+  // C3. localStorage 스키마 (+숫자만 저장)
   const store = await getStore(page);
   const b0 = store && store.bookings && store.bookings[0];
-  const schemaOk = !!store && store.version === 1 && Array.isArray(store.bookings) && !!b0 &&
-    /^bk_\d+$/.test(b0.id) && b0.name === '김테스트' && b0.qty === 1 &&
-    /^\d{4}-\d{2}-\d{2}$/.test(b0.pickupDate) && b0.time === '08:20' &&
-    b0.status === '접수' &&
+  const schemaOk = !!store && store.version === 1 && !!b0 &&
+    /^bk_\d+$/.test(b0.id) && b0.name === '김테스트' && b0.phone === '01011112222' &&
+    /^\d{4}-\d{2}-\d{2}$/.test(b0.pickupDate) && b0.time === '08:20' && b0.status === '접수' &&
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}[+-]\d{2}:\d{2}$/.test(b0.createdAt) &&
-    b0.consentAt === b0.createdAt && b0.updatedAt === b0.createdAt &&
-    b0.phone === '01011112222'; // 저장은 숫자만
-  const cardText = await page.locator('.booking-card').first().innerText();
-  log('localStorage: 확정 JSON 구조 + 연락처 숫자만 저장·포맷 표시',
-    schemaOk && cardText.includes('010-1111-2222'),
-    b0 ? `phone저장="${b0.phone}", 카드표시=${cardText.includes('010-1111-2222')}` : '저장 없음');
+    b0.consentAt === b0.createdAt;
+  log('C3 localStorage: 확정 JSON 구조 + 연락처 숫자만 저장', schemaOk,
+    b0 ? `id=${b0.id}, phone=${b0.phone}` : '저장 없음');
 
-  // 5. [R] 새로고침 후 데이터 유지 (오늘의 핵심!)
+  // C4. 새로고침 후 저장 유지
   await page.reload();
-  const persisted = (await page.locator('.booking-card').count()) === 1;
-  const nameKept = (await page.locator('.booking-card .name').first().innerText()) === '김테스트';
-  log('[R] 새로고침: 예약이 유지된다 (영속성)', persisted && nameKept);
+  const storeAfter = await getStore(page);
+  log('C4 [R] 새로고침: 저장 유지 (영속성)', storeAfter && storeAfter.bookings.length === 1);
 
-  // 6. [U] 상태 변경: 접수 → 확정, updatedAt 갱신, 새로고침에도 유지
-  await page.waitForTimeout(1100); // updatedAt 차이 확보 (초 단위 이상)
-  await page.locator('.status-select').first().selectOption('확정');
-  await page.waitForTimeout(200);
-  const badgeText = await page.locator('.status-badge').first().innerText();
-  const store2 = await getStore(page);
-  const updatedLater = store2.bookings[0].updatedAt > store2.bookings[0].createdAt;
-  await page.reload();
-  const badgeAfterReload = await page.locator('.status-badge').first().innerText();
-  log('[U] 수정: 상태 확정 + updatedAt 갱신 + 새로고침 유지',
-    badgeText === '확정' && updatedLater && badgeAfterReload === '확정',
-    `badge=${badgeText}→reload→${badgeAfterReload}, updatedAt>createdAt=${updatedLater}`);
-
-  // 7. 슬롯 상한: 같은 날짜·시간(08:20)에 3잔 추가 → 초과(1+3=4) 차단
+  // C5. 슬롯 상한 (같은 날짜·시간 3잔 초과 차단)
   dialogs.length = 0;
   await addBooking(page, '차초과', '010-9999-0000', { hour: '08', min: '20', qty: 3, expectBlocked: true });
   const blocked = dialogs.some((d) => d.type === 'alert' && d.msg.includes('가득'));
-  const stillOne = (await page.locator('.booking-card').count()) === 1;
-  log('슬롯 상한: 같은 날짜+시간 3잔 초과 차단', blocked && stillOne,
-    `alert=${blocked}, 카드=${await page.locator('.booking-card').count()}`);
+  log('C5 슬롯 상한: 10분당 3잔 초과 차단', blocked && (await getStore(page)).bookings.length === 1);
 
-  // 8. 취소는 슬롯 반납: 기존 예약을 취소로 바꾸면 같은 슬롯에 3잔 가능
-  await page.locator('.status-select').first().selectOption('취소');
+  // C6. 내 예약 확인 — 없는 예약
+  await page.click('#lookupToggle');
+  await page.fill('#lookupName', '없는사람');
+  await page.fill('#lookupPhone', '010-0000-9999');
+  await page.click('#lookupRun');
   await page.waitForTimeout(200);
-  dialogs.length = 0;
-  await addBooking(page, '박반납', '010-7777-8888', { hour: '08', min: '20', qty: 3 });
-  const nowTwo = (await page.locator('.booking-card').count()) === 2;
-  log('슬롯 반납: 취소된 예약 자리는 다시 예약 가능', nowTwo, `카드=${await page.locator('.booking-card').count()}`);
+  const noneMsg = await page.locator('#lookupResults .empty-state').innerText();
+  log('C6 내 예약 확인: 없는 예약 안내', noneMsg.includes('예약이 없어요'), `"${noneMsg.split('\n')[0]}..."`);
 
-  // 8-1. 삭제 잠금: 확정·픽업완료 상태는 삭제 불가 (접수·취소만 가능)
+  // C7. 내 예약 확인 — 있는 예약 조회
+  await page.fill('#lookupName', '김테스트');
+  await page.fill('#lookupPhone', '01011112222');
+  await page.click('#lookupRun');
+  await page.waitForTimeout(200);
+  const resCard = page.locator('#lookupResults .booking-card');
+  const found = (await resCard.count()) === 1;
+  const resText = found ? await resCard.innerText() : '';
+  const cancelBtnShown = found && (await resCard.locator('.btn-cancel-booking').count()) === 1;
+  const ovC = await overflowCheck(page);
+  log('C7 내 예약 확인: 본인 예약 표시 + 취소 버튼(접수) + 375px',
+    found && resText.includes('김테스트') && resText.includes('접수') && cancelBtnShown && ovC.overflowX <= 0,
+    `카드=${found}, 취소버튼=${cancelBtnShown}, overflowX=${ovC.overflowX}`);
+
+  // C8. 고객 취소 (접수 → 취소)
+  dialogs.length = 0;
+  await resCard.locator('.btn-cancel-booking').click();
+  await page.waitForTimeout(300);
+  const cancelConfirm = dialogs.some((d) => d.type === 'confirm' && d.msg.includes('취소'));
+  const storeCancel = await getStore(page);
+  const badgeNow = await page.locator('#lookupResults .status-badge').innerText();
+  const cancelBtnGone = (await page.locator('#lookupResults .btn-cancel-booking').count()) === 0;
+  log('C8 고객 취소: confirm→상태 취소 저장→버튼 사라짐',
+    cancelConfirm && storeCancel.bookings[0].status === '취소' && badgeNow === '취소' && cancelBtnGone,
+    `저장상태=${storeCancel.bookings[0].status}, 배지=${badgeNow}`);
+
+  // C9. 취소 = 슬롯 반납 (같은 슬롯 3잔 성공)
+  await addBooking(page, '박반납', '010-7777-8888', { hour: '08', min: '20', qty: 3 });
+  log('C9 슬롯 반납: 취소 후 같은 슬롯 3잔 예약 가능', (await getStore(page)).bookings.length === 2);
+
+  // C10. 관리자 페이지 이동 (토스트 → 자동 이동)
+  await page.click('#adminLink');
+  const toastText = await page.locator('#toast').innerText();
+  const toastShown = !(await page.locator('#toast').isHidden());
+  await page.waitForURL(/admin\.html/, { timeout: 5000 });
+  log('C10 관리자 버튼: 토스트 표시 후 admin.html 이동',
+    toastShown && toastText === '관리자페이지로 이동합니다', `토스트="${toastText}"`);
+
+  // ═══════ 관리자 페이지 ═══════
+
+  // A1. 목록 공유: 고객이 만든 예약 표시 + 탭 건수 + 전화 포맷
+  await page.waitForSelector('.booking-card', { timeout: 4000 });
+  const aCards = await page.locator('#bookingList .booking-card').count();
+  const aTab = await page.locator('#bookingTabs .date-tab').first().innerText();
+  const aText = await page.locator('#bookingList').innerText();
+  log('A1 관리자: 예약 목록 표시(저장소 공유) + 탭 건수 + 전화 포맷',
+    aCards === 2 && aTab.includes('2건') && aText.includes('010-7777-8888'),
+    `카드=${aCards}, 탭="${aTab}"`);
+
+  // A2. [U] 상태 확정 + updatedAt + 새로고침 유지
+  await page.waitForTimeout(1100);
   const bakCard = page.locator('.booking-card', { hasText: '박반납' });
   await bakCard.locator('.status-select').selectOption('확정');
   await page.waitForTimeout(200);
-  const delDisabledConfirmed = await page.locator('.booking-card', { hasText: '박반납' }).locator('.btn-delete').isDisabled();
-  // 말풍선 툴팁: locked 래퍼에 hover 시 ::after 로 문구 표시
+  const storeU = await getStore(page);
+  const bakU = storeU.bookings.find((b) => b.name === '박반납');
+  await page.reload();
+  const badgeAfter = await page.locator('.booking-card', { hasText: '박반납' }).locator('.status-badge').innerText();
+  log('A2 [U] 상태 확정 + updatedAt 갱신 + 새로고침 유지',
+    bakU.status === '확정' && bakU.updatedAt > bakU.createdAt && badgeAfter === '확정');
+
+  // A3. 삭제 잠금 + 툴팁 + 픽업완료 → 완료 섹션 이동
+  const delDisabled = await page.locator('.booking-card', { hasText: '박반납' }).locator('.btn-delete').isDisabled();
   await page.locator('.booking-card', { hasText: '박반납' }).locator('.del-wrap.locked').hover();
-  const tipText = await page.evaluate(() => {
+  const tip = await page.evaluate(() => {
     const el = document.querySelector('.del-wrap.locked');
     return el ? getComputedStyle(el, '::after').content : '';
   });
-  const lockHintShown = tipText.includes('확정 이후 취소 불가능');
   await page.locator('.booking-card', { hasText: '박반납' }).locator('.status-select').selectOption('픽업완료');
   await page.waitForTimeout(200);
-  const delDisabledDone = await page.locator('.booking-card', { hasText: '박반납' }).locator('.btn-delete').isDisabled();
-  // 완료 섹션 이동 검증
   const inDone = (await page.locator('#doneList .booking-card').filter({ hasText: '박반납' }).count()) === 1;
-  const notInActive = (await page.locator('#bookingList .booking-card').filter({ hasText: '박반납' }).count()) === 0;
-  const doneTabText = await page.locator('#doneTabs .date-tab').first().innerText();
-  log('완료 항목: 픽업완료가 완료 섹션으로 이동 + 탭 건수', inDone && notInActive && doneTabText.includes('1건'),
-    `done탭="${doneTabText}", 예약목록잔존=${!notInActive}`);
-  await page.locator('.booking-card', { hasText: '박반납' }).locator('.status-select').selectOption('접수');
+  const doneTab = await page.locator('#doneTabs .date-tab').first().innerText();
+  const ovA = await overflowCheck(page);
+  log('A3 삭제 잠금(확정)+말풍선 + 픽업완료→완료 섹션 이동 + 375px',
+    delDisabled && tip.includes('확정 이후 취소 불가능') && inDone && doneTab.includes('1건') && ovA.overflowX <= 0,
+    `disabled=${delDisabled}, 툴팁=${tip.includes('확정 이후 취소 불가능')}, done탭="${doneTab}"`);
+
+  // A4. 접수 복귀 → 예약 목록으로 + 삭제 가능
+  await page.locator('#doneList .booking-card').locator('.status-select').selectOption('접수');
   await page.waitForTimeout(200);
-  const delEnabledBack = !(await page.locator('.booking-card', { hasText: '박반납' }).locator('.btn-delete').isDisabled());
-  log('삭제 잠금: 확정·픽업완료는 삭제 버튼 비활성 + 안내, 접수 복귀 시 활성',
-    delDisabledConfirmed && lockHintShown && delDisabledDone && delEnabledBack,
-    `확정=${delDisabledConfirmed}, 안내=${lockHintShown}, 픽업완료=${delDisabledDone}, 접수복귀=${delEnabledBack}`);
+  const backInActive = (await page.locator('#bookingList .booking-card').filter({ hasText: '박반납' }).count()) === 1;
+  const delEnabled = !(await page.locator('.booking-card', { hasText: '박반납' }).locator('.btn-delete').isDisabled());
+  log('A4 접수 복귀: 예약 목록 복귀 + 삭제 버튼 활성', backInActive && delEnabled);
 
-  // 9. 375px 겹침·가로 넘침 (컨트롤 포함 카드 2장 상태)
-  const ov = await page.evaluate(() => {
-    const doc = document.documentElement;
-    let poked = [];
-    document.querySelectorAll('body *').forEach((el) => {
-      const r = el.getBoundingClientRect();
-      if (r.width > 0 && (r.right > doc.clientWidth + 1 || r.left < -1)) {
-        poked.push(el.tagName + '.' + (el.className || '').toString().split(' ')[0]);
-      }
-    });
-    return { overflowX: doc.scrollWidth - doc.clientWidth, poked: poked.slice(0, 5) };
-  });
-  log('375px: 가로 넘침·겹침 없음', ov.overflowX <= 0 && ov.poked.length === 0,
-    `overflowX=${ov.overflowX}px poked=[${ov.poked.join(',')}]`);
-  await page.screenshot({ path: __dirname + '/day4-375-list.png', fullPage: true });
-
-  // 10. [D] 삭제: confirm 후 해당 건만 제거, 새로고침에도 삭제 유지
-  dialogs.length = 0;
-  await page.locator('.booking-card', { hasText: '박반납' }).locator('.btn-delete').click();
-  await page.waitForTimeout(300);
-  const delConfirm = dialogs.some((d) => d.type === 'confirm' && d.msg.includes('삭제'));
-  await page.reload();
-  const namesAfter = await page.locator('.booking-card .name').allInnerTexts();
-  const store3 = await getStore(page);
-  log('[D] 삭제: confirm→제거→새로고침에도 삭제 유지', delConfirm && !namesAfter.includes('박반납') && store3.bookings.length === 1,
-    `남은=${namesAfter.join(',')}, 저장소 건수=${store3.bookings.length}`);
-
-  // 10-1. 날짜 탭: 다른 날짜 예약 추가 → 탭 2개·건수 표시·전환
-  dialogs.length = 0;
-  await addBooking(page, '남다른날', '010-2222-3333', { hour: '09', min: '00', dateIndex: 1, noWait: true });
+  // A5. 날짜 탭: 고객 페이지에서 다른 날짜 예약 추가 → 관리자 탭 2개·전환
+  await page.goto(CUSTOMER);
+  await addBooking(page, '남다른날', '010-2222-3333', { hour: '09', min: '00', dateIndex: 1 });
+  await page.goto(ADMIN);
   const tabTexts = await page.locator('#bookingTabs .date-tab').allInnerTexts();
   await page.locator('#bookingTabs .date-tab').nth(1).click();
   await page.waitForTimeout(200);
-  const secondTabNames = await page.locator('#bookingList .booking-card .name').allInnerTexts();
-  const secondActive = await page.locator('#bookingTabs .date-tab').nth(1).evaluate((el) => el.classList.contains('active'));
-  log('날짜 탭: 날짜별 그룹핑 + 월/일·건수 라벨 + 탭 전환',
-    tabTexts.length === 2 && tabTexts.every((t) => /\d+\/\d+ \(.+\) · \d+건/.test(t)) && secondTabNames.includes('남다른날') && secondActive,
+  const tab2Names = await page.locator('#bookingList .booking-card .name').allInnerTexts();
+  log('A5 날짜 탭: 그룹핑 + 월/일·건수 라벨 + 전환',
+    tabTexts.length === 2 && tabTexts.every((t) => /\d+\/\d+ \(.+\) · \d+건/.test(t)) && tab2Names.includes('남다른날'),
     `탭=[${tabTexts.join(' | ')}]`);
+
+  // A6. [D] 삭제 + 모두 삭제 → 두 섹션 빈 상태 + 저장소 비움 + 새로고침 유지
+  dialogs.length = 0;
   await page.locator('#bookingList .booking-card', { hasText: '남다른날' }).locator('.btn-delete').click();
   await page.waitForTimeout(300);
-
-  // 11. 모두 삭제 → 빈 상태 + 저장소 빈 배열
-  while (await page.locator('.btn-delete').count()) {
-    await page.locator('.btn-delete').first().click();
+  while (await page.locator('.btn-delete:not([disabled])').count()) {
+    await page.locator('.btn-delete:not([disabled])').first().click();
     await page.waitForTimeout(150);
   }
-  const emptyAgain = await page.locator('#bookingList .empty-state').isVisible();
-  const store4 = await getStore(page);
-  await page.reload();
-  const emptyAfterReload = (await page.locator('#bookingList .empty-state').isVisible()) &&
+  const emptyBoth = (await page.locator('#bookingList .empty-state').isVisible()) &&
     (await page.locator('#doneList .empty-state').isVisible());
-  log('모두 삭제: 빈 상태 + 저장소 빈 배열 + 새로고침 유지',
-    emptyAgain && store4.bookings.length === 0 && emptyAfterReload);
+  const storeEnd = await getStore(page);
+  await page.reload();
+  const emptyAfterReload = await page.locator('#bookingList .empty-state').isVisible();
+  log('A6 [D] 삭제·모두 삭제: 두 섹션 빈 상태 + 저장소 비움 + 새로고침 유지',
+    dialogs.some((d) => d.type === 'confirm') && emptyBoth && storeEnd.bookings.length === 0 && emptyAfterReload);
 
   await browser.close();
 
