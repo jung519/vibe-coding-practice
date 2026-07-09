@@ -577,7 +577,7 @@
         </div>
         <div class="field">
           <label for="phone">연락처 <span class="required-mark">*</span></label>
-          <input type="tel" id="phone" placeholder="010-0000-0000">
+          <input type="tel" id="phone" placeholder="010-0000-0000" inputmode="numeric" autocomplete="tel">
           <p class="error-text" id="phoneError">연락처를 입력해 주세요.</p>
         </div>
       </div>
@@ -769,6 +769,19 @@
     const consentInput = document.getElementById('consent');
     const consentBox = document.getElementById('consentBox');
 
+    // ── 연락처: 저장은 숫자만, 표시는 010-0000-0000 형식 (3-4-4) ──
+    function phoneDigits(v) { return String(v || '').replace(/\D/g, '').slice(0, 11); }
+    function formatPhone(v) {
+      const d = phoneDigits(v);
+      if (d.length <= 3) return d;
+      if (d.length <= 7) return d.slice(0, 3) + '-' + d.slice(3);
+      return d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7);
+    }
+    // 입력 중 실시간: 숫자 외 문자는 제거되고 하이픈이 자동으로 보인다
+    phoneInput.addEventListener('input', function () {
+      phoneInput.value = formatPhone(phoneInput.value);
+    });
+
     // ── 픽업 날짜 옵션: 오늘~+8일 중 월요일(휴무) 제외 ──
     // 오늘 10시가 지났으면 오늘 아침 픽업은 불가 → 내일부터 시작
     const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
@@ -894,7 +907,7 @@
         '🔢 수량: ' + qty + '잔\n' +
         '📅 날짜: ' + dateLabel + '\n' +
         '⏰ 픽업: ' + time + '\n' +
-        '👤 ' + nameInput.value.trim() + ' (' + phoneInput.value.trim() + ')'
+        '👤 ' + nameInput.value.trim() + ' (' + formatPhone(phoneInput.value) + ')'
       );
       if (!okToBook) return;
 
@@ -906,7 +919,7 @@
         const booking = {
           id: 'bk_' + Date.now(),          // 타임스탬프 기반 고유 id (새로고침 후에도 충돌 없음)
           name: nameInput.value.trim(),
-          phone: phoneInput.value.trim(),
+          phone: phoneDigits(phoneInput.value), // DB(localStorage)에는 숫자만 저장
           menu: menu,
           qty: qty,
           pickupDate: pickupDate,
@@ -998,7 +1011,7 @@
       const badge = info.querySelector('.status-badge');
       badge.textContent = b.status;
       badge.classList.add('status-' + b.status);
-      info.querySelector('.menu').textContent = b.menu + ' × ' + b.qty + ' · ' + b.phone;
+      info.querySelector('.menu').textContent = b.menu + ' × ' + b.qty + ' · ' + formatPhone(b.phone);
       if (b.note) info.querySelector('.note').textContent = '요청: ' + b.note;
 
       const controls = document.createElement('div');

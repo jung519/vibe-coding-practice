@@ -68,6 +68,12 @@ async function addBooking(page, name, phone, opts) {
   const hasMonday = dateLabels.some((t) => t.includes('(월)'));
   log('픽업 날짜: 월요일(휴무) 옵션 제외', !hasMonday && dateLabels.length >= 6, `옵션=[${dateLabels.join(' | ')}]`);
 
+  // 2-1. 연락처 입력: 숫자만 허용 + 자동 하이픈 표시
+  await page.fill('#phone', '010abc1234!@#5678');
+  const phoneShown = await page.inputValue('#phone');
+  log('연락처: 숫자 외 문자 차단 + 010-0000-0000 표시', phoneShown === '010-1234-5678', `표시="${phoneShown}"`);
+  await page.fill('#phone', '');
+
   // 3. [C] 생성 → 카드 + 완료 피드백
   dialogs.length = 0;
   await addBooking(page, '김테스트', '010-1111-2222', { hour: '08', min: '20' });
@@ -84,9 +90,12 @@ async function addBooking(page, name, phone, opts) {
     /^\d{4}-\d{2}-\d{2}$/.test(b0.pickupDate) && b0.time === '08:20' &&
     b0.status === '접수' &&
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}[+-]\d{2}:\d{2}$/.test(b0.createdAt) &&
-    b0.consentAt === b0.createdAt && b0.updatedAt === b0.createdAt;
-  log('localStorage: 확정 JSON 구조(version·id·status·타임스탬프 3종)', schemaOk,
-    b0 ? `id=${b0.id}, status=${b0.status}, createdAt=${b0.createdAt}` : '저장 없음');
+    b0.consentAt === b0.createdAt && b0.updatedAt === b0.createdAt &&
+    b0.phone === '01011112222'; // 저장은 숫자만
+  const cardText = await page.locator('.booking-card').first().innerText();
+  log('localStorage: 확정 JSON 구조 + 연락처 숫자만 저장·포맷 표시',
+    schemaOk && cardText.includes('010-1111-2222'),
+    b0 ? `phone저장="${b0.phone}", 카드표시=${cardText.includes('010-1111-2222')}` : '저장 없음');
 
   // 5. [R] 새로고침 후 데이터 유지 (오늘의 핵심!)
   await page.reload();
