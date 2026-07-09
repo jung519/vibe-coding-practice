@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>모닝브루 — 망원동 핸드드립 카페</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #3b2f2f;
+      background: #faf8f5;
+      line-height: 1.6;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      padding: 80px 24px 60px;
+      background: linear-gradient(180deg, #fff8f0 0%, #faf8f5 100%);
+    }
+    .hero h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: #5c3d2e;
+    }
+    .hero p {
+      font-size: 1.1rem;
+      color: #7a6a5e;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+    .hero-cta {
+      display: inline-block;
+      margin-top: 24px;
+      padding: 14px 28px;
+      background: #c4713b;
+      color: #fff;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      text-decoration: none;
+      box-shadow: 0 4px 14px rgba(196, 113, 59, 0.3);
+      transition: transform 0.15s;
+    }
+    .hero-cta:active { transform: scale(0.97); }
+
+    /* ── Section 공통 ── */
+    section { padding: 48px 24px; max-width: 640px; margin: 0 auto; }
+    .section-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+      color: #5c3d2e;
+      text-align: center;
+    }
+    .section-sub {
+      text-align: center;
+      font-size: 0.95rem;
+      color: #7a6a5e;
+      margin: -16px auto 24px;
+      max-width: 400px;
+    }
+
+    /* ── 메뉴 카드 ── */
+    .menu-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    .menu-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 20px 16px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(92, 61, 46, 0.06);
+    }
+    .menu-card .emoji { font-size: 2rem; margin-bottom: 8px; }
+    .menu-card .name { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+    .menu-card .price { color: #b07c4f; font-weight: 700; font-size: 1rem; }
+
+    /* ── 저장 안내 배너 ── */
+    .demo-banner {
+      background: #eef4fb;
+      border: 1px solid #d5e3f5;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 0.85rem;
+      color: #3d6ca8;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    /* ── 예약 폼 ── */
+    .form-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 28px 24px;
+      box-shadow: 0 2px 12px rgba(92, 61, 46, 0.08);
+    }
+    .field { margin-bottom: 18px; }
+    .field label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #5c3d2e;
+      margin-bottom: 6px;
+    }
+    .field .optional {
+      font-weight: 400;
+      color: #b0a090;
+      font-size: 0.8rem;
+    }
+    .required-mark { color: #d9534f; font-weight: 700; }
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid #e8ddd0;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-family: inherit;
+      color: #3b2f2f;
+      background: #fffdfa;
+    }
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      outline: none;
+      border-color: #c4713b;
+    }
+    .field input.error { border-color: #d9534f; background: #fef7f6; }
+    .error-text {
+      display: none;
+      color: #d9534f;
+      font-size: 0.8rem;
+      margin-top: 4px;
+    }
+    .error-text.show { display: block; }
+    .field textarea { resize: vertical; min-height: 64px; }
+    .field-row { display: flex; gap: 12px; }
+    .field-row .field { flex: 1; }
+
+    .menu-hint {
+      font-size: 0.78rem;
+      color: #a08a70;
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    /* ── 수량 스테퍼 ── */
+    .stepper {
+      display: flex;
+      align-items: center;
+      border: 1.5px solid #e8ddd0;
+      border-radius: 10px;
+      background: #fffdfa;
+      overflow: hidden;
+    }
+    .stepper-btn {
+      width: 40px;
+      padding: 11px 0;
+      border: none;
+      background: none;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #c4713b;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .stepper-btn:active { background: #fdf8ee; }
+    .stepper-value {
+      flex: 1;
+      text-align: center;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #3b2f2f;
+    }
+
+    /* ── 개인정보 동의 ── */
+    .consent-box {
+      background: #faf6f0;
+      border: 1.5px solid #eee2d0;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+    }
+    .consent-box.error { border-color: #d9534f; background: #fef7f6; }
+    .consent-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #5c3d2e;
+      cursor: pointer;
+    }
+    .consent-label input {
+      width: 18px;
+      height: 18px;
+      accent-color: #c4713b;
+      flex-shrink: 0;
+    }
+    .consent-details { margin-top: 8px; }
+    .consent-details summary {
+      font-size: 0.8rem;
+      color: #a08a70;
+      cursor: pointer;
+      user-select: none;
+    }
+    .consent-details ul {
+      margin: 8px 0 0 18px;
+      font-size: 0.8rem;
+      color: #6b5b50;
+      line-height: 1.7;
+    }
+
+    .btn-submit {
+      display: block;
+      width: 100%;
+      padding: 16px 24px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      text-align: center;
+      background: #c4713b;
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(196, 113, 59, 0.3);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn-submit:active { transform: scale(0.97); }
+    .btn-submit:disabled {
+      background: #d9c8b4;
+      box-shadow: none;
+      cursor: wait;
+    }
+
+    /* ── 완료 피드백 ── */
+    .success-box {
+      display: none;
+      background: #f0f8f0;
+      border: 1.5px solid #cde8cd;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-top: 14px;
+      font-size: 0.9rem;
+      color: #3a7a3a;
+      text-align: center;
+    }
+    .success-box.show { display: block; }
+
+    /* ── 예약 목록 ── */
+    .list-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #5c3d2e;
+      margin: 28px 0 14px;
+      text-align: center;
+    }
+    .list-area { display: flex; flex-direction: column; gap: 12px; }
+    .empty-state {
+      background: #fff;
+      border: 1.5px dashed #e0d5c5;
+      border-radius: 14px;
+      padding: 36px 20px;
+      text-align: center;
+      color: #b0a090;
+      font-size: 0.95rem;
+    }
+    .empty-state .emoji { font-size: 2rem; display: block; margin-bottom: 8px; }
+
+    .booking-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 18px 20px;
+      box-shadow: 0 2px 8px rgba(92, 61, 46, 0.06);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .booking-info { flex: 1; min-width: 0; }
+    .booking-info .top {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+    .booking-info .name { font-weight: 700; color: #5c3d2e; }
+    .booking-info .time {
+      background: #fdf8ee;
+      color: #a06030;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+    .booking-info .menu { font-size: 0.9rem; color: #6b5b50; }
+    .booking-info .note { font-size: 0.82rem; color: #b0a090; margin-top: 2px; }
+
+    /* 상태 배지 */
+    .status-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+    .status-접수 { background: #fdf8ee; color: #a06030; }
+    .status-확정 { background: #eef7ee; color: #3a7a3a; }
+    .status-픽업완료 { background: #f0f0f0; color: #808080; }
+    .status-취소 { background: #fdeeee; color: #c0504d; }
+
+    /* 카드 우측 컨트롤 (상태 변경 + 삭제) */
+    .booking-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex-shrink: 0;
+      width: 96px;
+    }
+    .status-select {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1.5px solid #e8ddd0;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-family: inherit;
+      color: #5c3d2e;
+      background: #fffdfa;
+    }
+    .btn-delete {
+      background: none;
+      border: 1.5px solid #e8ddd0;
+      color: #b0a090;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.82rem;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .btn-delete:hover:not(:disabled) { border-color: #d9534f; color: #d9534f; }
+    .btn-delete:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .lock-hint {
+      font-size: 0.68rem;
+      color: #b0a090;
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    /* ── 특징 ── */
+    .features {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .feature-item {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 8px rgba(92, 61, 46, 0.06);
+    }
+    .feature-item .emoji { font-size: 1.4rem; flex-shrink: 0; }
+    .feature-item span { font-size: 0.95rem; }
+
+    /* ── 위치 & 영업시간 ── */
+    .info-box {
+      background: #fdf8ee;
+      border-radius: 16px;
+      padding: 32px 28px;
+      box-shadow: 0 2px 12px rgba(180, 150, 80, 0.08);
+      border: 1px solid #f5e8c8;
+    }
+    .info-row {
+      display: flex;
+      gap: 12px;
+      padding: 14px 0;
+      border-bottom: 1px solid #f0e6d0;
+      align-items: baseline;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-label {
+      font-weight: 600;
+      min-width: 72px;
+      flex-shrink: 0;
+      color: #5c3d2e;
+      font-size: 0.9rem;
+    }
+    .info-value { font-size: 0.9rem; color: #6b5b50; }
+    .badge-closed {
+      display: inline-block;
+      background: #f0e0d0;
+      color: #a06030;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 6px;
+      margin-left: 6px;
+    }
+
+    /* ── CTA 버튼 ── */
+    .cta-section {
+      text-align: center;
+      padding-top: 56px;
+      padding-bottom: 72px;
+      background: linear-gradient(180deg, #faf8f5 0%, #fff8f0 100%);
+    }
+    .cta-sub {
+      font-size: 0.95rem;
+      color: #7a6a5e;
+      margin-bottom: 20px;
+    }
+    .cta-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-width: 340px;
+      margin: 0 auto;
+    }
+    .btn {
+      display: inline-block;
+      padding: 18px 28px;
+      border-radius: 14px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      text-decoration: none;
+      text-align: center;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary {
+      background: #c4713b;
+      color: #fff;
+      box-shadow: 0 6px 20px rgba(196, 113, 59, 0.35);
+    }
+    .btn-secondary {
+      background: #5c3d2e;
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(92, 61, 46, 0.25);
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 0.8rem;
+      color: #b0a090;
+    }
+
+    /* ── 데스크톱 ── */
+    @media (min-width: 480px) {
+      .menu-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (min-width: 640px) {
+      .hero { padding: 100px 24px 80px; }
+      .hero h1 { font-size: 3rem; }
+      section { padding: 56px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 첫 화면: 가게 이름 + 한 줄 소개 -->
+  <header class="hero">
+    <h1>모닝브루</h1>
+    <p>오늘도 좋은 아침이에요. 망원동 골목 끝, 정성껏 내린 한 잔이 기다리고 있어요.</p>
+    <a href="#reserve" class="hero-cta">☕ 아침 픽업 예약하기</a>
+  </header>
+
+  <!-- 대표 메뉴 -->
+  <section>
+    <h2 class="section-title">오늘의 추천 메뉴</h2>
+    <div class="menu-grid">
+      <div class="menu-card">
+        <div class="emoji">☕</div>
+        <div class="name">핸드드립 커피</div>
+        <div class="price">5,500원</div>
+      </div>
+      <div class="menu-card">
+        <div class="emoji">🫘</div>
+        <div class="name">오늘의 원두</div>
+        <div class="price">4,500원</div>
+      </div>
+      <div class="menu-card">
+        <div class="emoji">🥐</div>
+        <div class="name">수제 스콘</div>
+        <div class="price">3,500원</div>
+      </div>
+      <div class="menu-card">
+        <div class="emoji">🍋</div>
+        <div class="name">계절 과일 에이드</div>
+        <div class="price">6,000원</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 아침 픽업 예약 (Day4: localStorage 영속화 + CRUD) -->
+  <section id="reserve">
+    <h2 class="section-title">아침 픽업 예약</h2>
+    <p class="section-sub">줄 서지 않는 아침 — 미리 주문하고, 예약한 시간에 픽업만 하세요.</p>
+
+    <div class="demo-banner">
+      💾 예약이 <strong>이 브라우저(localStorage)에 저장</strong>됩니다 — 새로고침해도 유지돼요.<br>
+      단, 서버로 전송되지 않고 이 브라우저에만 남으니 <strong>실습용 가짜 데이터만</strong> 입력하세요.
+    </div>
+
+    <form class="form-card" id="bookingForm" novalidate>
+      <div class="field-row">
+        <div class="field">
+          <label for="name">이름 <span class="required-mark">*</span></label>
+          <input type="text" id="name" placeholder="김테스트">
+          <p class="error-text" id="nameError">이름을 입력해 주세요.</p>
+        </div>
+        <div class="field">
+          <label for="phone">연락처 <span class="required-mark">*</span></label>
+          <input type="tel" id="phone" placeholder="010-0000-0000">
+          <p class="error-text" id="phoneError">연락처를 입력해 주세요.</p>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="menu">메뉴</label>
+          <select id="menu">
+            <option value="핸드드립 커피 (5,500원)">☕ 핸드드립 커피 (5,500원)</option>
+            <option value="오늘의 원두 (4,500원)">🫘 오늘의 원두 (4,500원)</option>
+            <option value="수제 스콘 (3,500원)">🥐 수제 스콘 (3,500원)</option>
+            <option value="계절 과일 에이드 (6,000원)">🍋 계절 과일 에이드 (6,000원)</option>
+          </select>
+          <p class="menu-hint">🥐 수제 스콘은 당일 구운 수량만 판매해요 — 소진 시 예약이 취소될 수 있어 미리 연락드립니다.</p>
+        </div>
+        <div class="field" style="max-width: 140px;">
+          <label for="qty">수량 <span class="optional">(최대 3)</span></label>
+          <div class="stepper">
+            <button type="button" class="stepper-btn" id="qtyMinus">−</button>
+            <span class="stepper-value" id="qtyValue">1</span>
+            <button type="button" class="stepper-btn" id="qtyPlus">＋</button>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="pickupDate">픽업 날짜 <span class="optional">(월요일 휴무)</span></label>
+        <select id="pickupDate"></select>
+      </div>
+      <div class="field">
+        <label for="timeHour">픽업 희망 시간 <span class="optional">(아침 픽업 08:00~10:00 · 슬롯당 3잔까지)</span></label>
+        <div class="field-row">
+          <select id="timeHour">
+            <option value="08">08시</option>
+            <option value="09">09시</option>
+            <option value="10">10시</option>
+          </select>
+          <select id="timeMin"></select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="note">요청사항 <span class="optional">(선택)</span></label>
+        <textarea id="note" placeholder="예: 얼음 적게, 봉투에 담아주세요"></textarea>
+      </div>
+
+      <!-- 개인정보 수집 동의 -->
+      <div class="consent-box" id="consentBox">
+        <label class="consent-label">
+          <input type="checkbox" id="consent">
+          <span>개인정보 수집·이용에 동의합니다 <span class="required-mark">*</span></span>
+        </label>
+        <details class="consent-details">
+          <summary>자세히 보기</summary>
+          <ul>
+            <li><strong>수집 항목</strong>: 이름, 연락처</li>
+            <li><strong>이용 목적</strong>: 픽업 예약 확인 및 예약 관련 연락 (재고 소진·변경 안내 포함)</li>
+            <li><strong>보유 기간</strong>: 예약일로부터 <strong>1개월</strong> 후 파기</li>
+            <li>동의를 거부할 수 있으나, 거부 시 픽업 예약 접수가 불가합니다.</li>
+            <li>수집된 정보는 마케팅 목적으로 사용하지 않습니다.</li>
+          </ul>
+        </details>
+        <p class="error-text" id="consentError">개인정보 수집·이용에 동의해 주세요.</p>
+      </div>
+
+      <button type="submit" class="btn-submit" id="submitBtn">📝 픽업 예약하기</button>
+      <div class="success-box" id="successBox"></div>
+    </form>
+
+    <h3 class="list-title">예약 목록</h3>
+    <div class="list-area" id="bookingList"></div>
+  </section>
+
+  <!-- 특징 -->
+  <section>
+    <h2 class="section-title">이런 마음으로 준비해요</h2>
+    <div class="features">
+      <div class="feature-item">
+        <div class="emoji">🌅</div>
+        <span>매일 아침, 첫 손님을 위해 직접 핸드드립을 내려요</span>
+      </div>
+      <div class="feature-item">
+        <div class="emoji">🍞</div>
+        <span>스콘은 당일 아침에 굽는 것만 드려요</span>
+      </div>
+      <div class="feature-item">
+        <div class="emoji">🪑</div>
+        <span>혼자 오셔도 편하게 쉴 수 있는 1인 좌석이 있어요</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 위치 & 영업시간 -->
+  <section>
+    <h2 class="section-title">찾아오시는 길</h2>
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">주소</span>
+        <span class="info-value">서울 망원동 골목 끝, 망원역 2번 출구 도보 6분</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">영업시간</span>
+        <span class="info-value">화~일 08:00 – 20:00</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">휴무</span>
+        <span class="info-value">매주 월요일 <span class="badge-closed">정기 휴무</span></span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">전화</span>
+        <span class="info-value">02-123-4567</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 연락/예약 버튼 -->
+  <section class="cta-section">
+    <h2 class="section-title">편하게 연락 주세요</h2>
+    <p class="cta-sub">예약이나 궁금한 점, 언제든 환영합니다</p>
+    <div class="cta-buttons">
+      <a href="#reserve" class="btn btn-primary">📝 픽업 예약하기</a>
+      <a href="tel:02-123-4567" class="btn btn-secondary">📞 전화로 문의하기</a>
+      <a href="https://instagram.com/morningbrew_official" class="btn btn-secondary" target="_blank" rel="noopener">📸 인스타그램 구경하기</a>
+    </div>
+  </section>
+
+  <footer>
+    &copy; 2026 모닝브루. All rights reserved.
+  </footer>
+
+  <script>
+    // ═══════════════════════════════════════════════════
+    // Day4: localStorage 영속화 — 확정 JSON 구조 (version 1)
+    // { "version": 1, "bookings": [ {id, name, phone, menu, qty,
+    //   pickupDate, time, note, status, createdAt, consentAt, updatedAt} ] }
+    // ═══════════════════════════════════════════════════
+    const STORAGE_KEY = 'morningbrew.bookings';
+    const STATUSES = ['접수', '확정', '픽업완료', '취소'];
+
+    // 현재 시각을 로컬 타임존 오프셋 포함 ISO 문자열로 (예: 2026-07-09T10:30:00.000+09:00)
+    function nowISO() {
+      const d = new Date();
+      const off = -d.getTimezoneOffset();
+      const sign = off >= 0 ? '+' : '-';
+      const pad = function (n, w) { return String(Math.abs(n)).padStart(w || 2, '0'); };
+      return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+        'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()) +
+        '.' + pad(d.getMilliseconds(), 3) + sign + pad(Math.floor(off / 60)) + ':' + pad(off % 60);
+    }
+
+    // [R] 읽기: localStorage → 배열 복원 (깨진 데이터는 빈 배열로 안전 복구)
+    function loadBookings() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return [];
+        const data = JSON.parse(raw);
+        if (data && data.version === 1 && Array.isArray(data.bookings)) return data.bookings;
+        return [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    // 저장: 배열 → localStorage (모든 C/U/D 뒤에 호출)
+    function saveBookings() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, bookings: bookings }));
+    }
+
+    let bookings = loadBookings();
+
+    // ── 운영 정책 상수 ──
+    // 슬롯당 최대 3잔: 핸드드립 1잔 3~4분(가정) → 10분에 2.5~3.3잔이 물리적 상한. (다면조사 근거)
+    const MAX_CUPS_PER_SLOT = 3;
+
+    const form = document.getElementById('bookingForm');
+    const listEl = document.getElementById('bookingList');
+    const hourSelect = document.getElementById('timeHour');
+    const minSelect = document.getElementById('timeMin');
+    const dateSelect = document.getElementById('pickupDate');
+    const submitBtn = document.getElementById('submitBtn');
+    const successBox = document.getElementById('successBox');
+    const nameInput = document.getElementById('name');
+    const phoneInput = document.getElementById('phone');
+    const consentInput = document.getElementById('consent');
+    const consentBox = document.getElementById('consentBox');
+
+    // ── 픽업 날짜 옵션: 오늘~+8일 중 월요일(휴무) 제외 ──
+    // 오늘 10시가 지났으면 오늘 아침 픽업은 불가 → 내일부터 시작
+    const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+    function renderDateOptions() {
+      const now = new Date();
+      const start = new Date(now);
+      if (now.getHours() >= 10) start.setDate(start.getDate() + 1);
+      dateSelect.innerHTML = '';
+      for (let i = 0; i < 8; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        if (d.getDay() === 1) continue; // 월요일 정기 휴무 — 예약 자체를 차단
+        const pad = function (n) { return String(n).padStart(2, '0'); };
+        const value = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+        const isToday = d.toDateString() === now.toDateString();
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = (d.getMonth() + 1) + '/' + d.getDate() + ' (' + DAY_NAMES[d.getDay()] + ')' + (isToday ? ' — 오늘' : '');
+        dateSelect.appendChild(opt);
+      }
+    }
+    renderDateOptions();
+
+    // ── 픽업 시간: 시(08~10)·분(10분 단위) 분리 선택. 10시는 00분만. ──
+    function renderMinOptions() {
+      const isLastHour = hourSelect.value === '10';
+      const prev = minSelect.value;
+      minSelect.innerHTML = '';
+      const minutes = isLastHour ? [0] : [0, 10, 20, 30, 40, 50];
+      minutes.forEach(function (m) {
+        const mm = String(m).padStart(2, '0');
+        const opt = document.createElement('option');
+        opt.value = mm;
+        opt.textContent = mm + '분';
+        minSelect.appendChild(opt);
+      });
+      if ([].some.call(minSelect.options, function (o) { return o.value === prev; })) {
+        minSelect.value = prev;
+      }
+    }
+    hourSelect.addEventListener('change', renderMinOptions);
+    renderMinOptions();
+
+    // ── 수량 스테퍼: 1~3잔 ──
+    let qty = 1;
+    const QTY_MIN = 1, QTY_MAX = 3;
+    const qtyValueEl = document.getElementById('qtyValue');
+    document.getElementById('qtyMinus').addEventListener('click', function () {
+      if (qty > QTY_MIN) { qty--; qtyValueEl.textContent = qty; }
+    });
+    document.getElementById('qtyPlus').addEventListener('click', function () {
+      if (qty < QTY_MAX) { qty++; qtyValueEl.textContent = qty; }
+    });
+
+    // ── 필수값 검증: 이름·연락처·개인정보 동의 ──
+    function validate() {
+      let ok = true;
+
+      nameInput.classList.remove('error');
+      phoneInput.classList.remove('error');
+      consentBox.classList.remove('error');
+      document.getElementById('nameError').classList.remove('show');
+      document.getElementById('phoneError').classList.remove('show');
+      document.getElementById('consentError').classList.remove('show');
+
+      if (nameInput.value.trim() === '') {
+        nameInput.classList.add('error');
+        document.getElementById('nameError').classList.add('show');
+        ok = false;
+      }
+      if (phoneInput.value.trim() === '') {
+        phoneInput.classList.add('error');
+        document.getElementById('phoneError').classList.add('show');
+        ok = false;
+      }
+      if (!consentInput.checked) {
+        consentBox.classList.add('error');
+        document.getElementById('consentError').classList.add('show');
+        ok = false;
+      }
+      return ok;
+    }
+
+    // ── 슬롯 잔여량: 같은 날짜+시간의 잔 수 합계 (취소된 예약은 자리 반납) ──
+    function cupsInSlot(date, time) {
+      return bookings
+        .filter(function (b) { return b.pickupDate === date && b.time === time && b.status !== '취소'; })
+        .reduce(function (sum, b) { return sum + Number(b.qty); }, 0);
+    }
+
+    // ── [C] 생성: 검증 → confirm → 처리 중 → 저장 → 완료 피드백 ──
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      successBox.classList.remove('show');
+
+      if (!validate()) {
+        alert('⚠️ 필수 항목을 확인해 주세요.\n이름·연락처 입력과 개인정보 수집 동의가 필요합니다.');
+        return;
+      }
+
+      const pickupDate = dateSelect.value;
+      const dateLabel = dateSelect.options[dateSelect.selectedIndex].textContent;
+      const time = hourSelect.value + ':' + minSelect.value;
+      const menu = document.getElementById('menu').value;
+
+      const used = cupsInSlot(pickupDate, time);
+      if (used + qty > MAX_CUPS_PER_SLOT) {
+        const remain = MAX_CUPS_PER_SLOT - used;
+        alert(
+          '⚠️ ' + dateLabel + ' ' + time + ' 슬롯은 예약이 가득 찼습니다.\n' +
+          (remain > 0
+            ? '남은 가능 수량: ' + remain + '잔 (요청: ' + qty + '잔)\n'
+            : '') +
+          '다른 시간을 선택해 주세요.\n\n' +
+          '※ 정성껏 내리기 위해 10분당 ' + MAX_CUPS_PER_SLOT + '잔까지만 받고 있어요.'
+        );
+        return;
+      }
+
+      const okToBook = confirm(
+        '아래 내용으로 예약할까요?\n\n' +
+        '☕ 메뉴: ' + menu + '\n' +
+        '🔢 수량: ' + qty + '잔\n' +
+        '📅 날짜: ' + dateLabel + '\n' +
+        '⏰ 픽업: ' + time + '\n' +
+        '👤 ' + nameInput.value.trim() + ' (' + phoneInput.value.trim() + ')'
+      );
+      if (!okToBook) return;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = '⏳ 접수 처리 중…';
+
+      setTimeout(function () {
+        const ts = nowISO();
+        const booking = {
+          id: 'bk_' + Date.now(),          // 타임스탬프 기반 고유 id (새로고침 후에도 충돌 없음)
+          name: nameInput.value.trim(),
+          phone: phoneInput.value.trim(),
+          menu: menu,
+          qty: qty,
+          pickupDate: pickupDate,
+          time: time,
+          note: document.getElementById('note').value,
+          status: '접수',                   // 접수 → 확정 → 픽업완료 / 취소
+          createdAt: ts,                    // 보유기간(1개월) 파기 기준
+          consentAt: ts,                    // 개인정보 동의 시각 증빙
+          updatedAt: ts
+        };
+        bookings.push(booking);
+        saveBookings(); // [C] localStorage 반영
+
+        successBox.textContent = '✅ 접수됐습니다! ' + dateLabel + ' ' + time + '에 준비해 둘게요. (' + booking.name + '님, ' + menu + ' × ' + qty + ')';
+        successBox.classList.add('show');
+
+        form.reset();
+        qty = 1; qtyValueEl.textContent = qty;
+        renderDateOptions();
+        renderMinOptions();
+        submitBtn.disabled = false;
+        submitBtn.textContent = '📝 픽업 예약하기';
+        render();
+      }, 800);
+    });
+
+    // ── [U] 수정: 예약 상태 변경 (접수→확정→픽업완료/취소) ──
+    function updateStatus(id, newStatus) {
+      const target = bookings.find(function (b) { return b.id === id; });
+      if (!target || target.status === newStatus) return;
+      target.status = newStatus;
+      target.updatedAt = nowISO(); // 수정 시각 갱신
+      saveBookings(); // [U] localStorage 반영
+      render();
+    }
+
+    // 삭제 가능 여부: 확정·픽업완료 단계부터는 삭제 불가 (접수·취소만 삭제 가능)
+    function isDeletable(b) {
+      return b.status === '접수' || b.status === '취소';
+    }
+
+    // ── [D] 삭제: confirm 확인 후 제거 ──
+    function removeBooking(id) {
+      const target = bookings.find(function (b) { return b.id === id; });
+      if (!target) return;
+      // 방어선: 버튼 비활성화를 우회해도 여기서 차단
+      if (!isDeletable(target)) {
+        alert('⚠️ "' + target.status + '" 상태의 예약은 삭제할 수 없습니다.\n삭제하려면 먼저 상태를 "취소"로 변경해 주세요.');
+        return;
+      }
+      const ok = confirm(
+        '이 예약을 삭제할까요?\n\n' +
+        '👤 ' + target.name + ' · 📅 ' + target.pickupDate + ' ⏰ ' + target.time + '\n' +
+        '☕ ' + target.menu + ' × ' + target.qty
+      );
+      if (!ok) return;
+      bookings = bookings.filter(function (b) { return b.id !== id; });
+      saveBookings(); // [D] localStorage 반영
+      render();
+    }
+
+    // ── [R] 목록 그리기: 날짜·시간 순 정렬 ──
+    function render() {
+      listEl.innerHTML = '';
+
+      if (bookings.length === 0) {
+        listEl.innerHTML =
+          '<div class="empty-state">' +
+          '<span class="emoji">🌅</span>' +
+          '아직 예약이 없어요.<br>첫 예약을 기다리고 있습니다!' +
+          '</div>';
+        return;
+      }
+
+      const sorted = bookings.slice().sort(function (a, b) {
+        return (a.pickupDate + a.time).localeCompare(b.pickupDate + b.time);
+      });
+
+      sorted.forEach(function (b) {
+        const card = document.createElement('div');
+        card.className = 'booking-card';
+
+        const info = document.createElement('div');
+        info.className = 'booking-info';
+        info.innerHTML =
+          '<div class="top">' +
+          '<span class="name"></span>' +
+          '<span class="time"></span>' +
+          '<span class="status-badge"></span>' +
+          '</div>' +
+          '<div class="menu"></div>' +
+          (b.note ? '<div class="note"></div>' : '');
+        info.querySelector('.name').textContent = b.name;
+        info.querySelector('.time').textContent = b.pickupDate.slice(5).replace('-', '/') + ' ' + b.time;
+        const badge = info.querySelector('.status-badge');
+        badge.textContent = b.status;
+        badge.classList.add('status-' + b.status);
+        info.querySelector('.menu').textContent = b.menu + ' × ' + b.qty + ' · ' + b.phone;
+        if (b.note) info.querySelector('.note').textContent = '요청: ' + b.note;
+
+        const controls = document.createElement('div');
+        controls.className = 'booking-controls';
+
+        const statusSel = document.createElement('select');
+        statusSel.className = 'status-select';
+        STATUSES.forEach(function (s) {
+          const opt = document.createElement('option');
+          opt.value = s;
+          opt.textContent = s;
+          if (s === b.status) opt.selected = true;
+          statusSel.appendChild(opt);
+        });
+        statusSel.addEventListener('change', function () { updateStatus(b.id, statusSel.value); });
+
+        const del = document.createElement('button');
+        del.className = 'btn-delete';
+        del.textContent = '삭제';
+        del.disabled = !isDeletable(b); // 확정·픽업완료는 삭제 잠금
+        del.addEventListener('click', function () { removeBooking(b.id); });
+
+        controls.appendChild(statusSel);
+        controls.appendChild(del);
+        if (!isDeletable(b)) {
+          const hint = document.createElement('div');
+          hint.className = 'lock-hint';
+          hint.textContent = '취소로 변경 후 삭제 가능';
+          controls.appendChild(hint);
+        }
+        card.appendChild(info);
+        card.appendChild(controls);
+        listEl.appendChild(card);
+      });
+    }
+
+    render(); // [R] 첫 로드: localStorage에서 복원된 목록 표시
+  </script>
+</body>
+</html>
