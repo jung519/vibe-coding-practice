@@ -108,6 +108,24 @@ async function overflowCheck(page) {
   log('C5-1 슬롯 현황: 일부 예약 시 (n/3) 숫자 표시 + 선택 가능',
     optPartial.includes('(1/3)') && partialEnabled, `라벨="${optPartial}"`);
 
+  // C5-2. 픽업완료는 현황 제외: 김테스트(1잔)를 완료 처리하면 (1/3) 표기가 사라진다
+  await page.evaluate((k) => {
+    const d = JSON.parse(localStorage.getItem(k));
+    d.bookings[0].status = '픽업완료';
+    localStorage.setItem(k, JSON.stringify(d));
+  }, KEY);
+  await page.reload();
+  await page.selectOption('#timeHour', '08');
+  const optDone = await page.locator('#timeMin option[value="20"]').innerText();
+  // 원복 (이후 테스트는 접수 상태 전제)
+  await page.evaluate((k) => {
+    const d = JSON.parse(localStorage.getItem(k));
+    d.bookings[0].status = '접수';
+    localStorage.setItem(k, JSON.stringify(d));
+  }, KEY);
+  await page.reload();
+  log('C5-2 픽업완료 제외: 완료 처리 시 현황 숫자에서 빠짐', optDone === '20분', `라벨="${optDone}"`);
+
   // C6. 내 예약 확인 — 없는 예약
   await page.click('#lookupToggle');
   await page.fill('#lookupName', '없는사람');

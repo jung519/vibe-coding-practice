@@ -974,10 +974,14 @@
       return ok;
     }
 
-    // ── 슬롯 잔여량: 같은 날짜+시간의 잔 수 합계 (취소된 예약은 자리 반납) ──
+    // ── 슬롯 잔여량: 같은 날짜+시간의 잔 수 합계 ──
+    // 접수·확정만 카운트 — 취소(반납)와 픽업완료(이미 전달됨)는 슬롯을 차지하지 않는다
     function cupsInSlot(date, time) {
       return bookings
-        .filter(function (b) { return b.pickupDate === date && b.time === time && b.status !== '취소'; })
+        .filter(function (b) {
+          return b.pickupDate === date && b.time === time &&
+            (b.status === '접수' || b.status === '확정');
+        })
         .reduce(function (sum, b) { return sum + Number(b.qty); }, 0);
     }
 
