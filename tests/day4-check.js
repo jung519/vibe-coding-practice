@@ -122,7 +122,13 @@ async function addBooking(page, name, phone, opts) {
   await bakCard.locator('.status-select').selectOption('확정');
   await page.waitForTimeout(200);
   const delDisabledConfirmed = await page.locator('.booking-card', { hasText: '박반납' }).locator('.btn-delete').isDisabled();
-  const lockHintShown = await page.locator('.booking-card', { hasText: '박반납' }).locator('.lock-hint').isVisible();
+  // 말풍선 툴팁: locked 래퍼에 hover 시 ::after 로 문구 표시
+  await page.locator('.booking-card', { hasText: '박반납' }).locator('.del-wrap.locked').hover();
+  const tipText = await page.evaluate(() => {
+    const el = document.querySelector('.del-wrap.locked');
+    return el ? getComputedStyle(el, '::after').content : '';
+  });
+  const lockHintShown = tipText.includes('확정 이후 취소 불가능');
   await page.locator('.booking-card', { hasText: '박반납' }).locator('.status-select').selectOption('픽업완료');
   await page.waitForTimeout(200);
   const delDisabledDone = await page.locator('.booking-card', { hasText: '박반납' }).locator('.btn-delete').isDisabled();
