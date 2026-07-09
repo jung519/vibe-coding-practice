@@ -23,12 +23,16 @@ async function addBooking(page, name, phone, opts) {
   await page.fill('#name', name);
   await page.fill('#phone', phone);
   await page.check('#consent');
+  if (opts.dateIndex !== undefined) await page.selectOption('#pickupDate', { index: opts.dateIndex });
   if (opts.hour) await page.selectOption('#timeHour', opts.hour);
   if (opts.min) await page.selectOption('#timeMin', opts.min);
   for (let i = 1; i < (opts.qty || 1); i++) await page.click('#qtyPlus');
   const before = await page.locator('.booking-card').count();
   await page.click('#submitBtn');
-  if (!opts.expectBlocked) {
+  if (opts.noWait) {
+    // 다른 날짜 탭으로 들어가는 예약은 화면 카드 수가 안 변하므로 완료 박스로만 대기
+    await page.waitForSelector('.success-box.show', { timeout: 4000 });
+  } else if (!opts.expectBlocked) {
     await page.waitForFunction(
       (n) => document.querySelectorAll('.booking-card').length === n,
       before + 1, { timeout: 4000 }
@@ -55,7 +59,9 @@ async function addBooking(page, name, phone, opts) {
   await page.reload();
 
   // 1. 빈 상태
-  log('빈 상태: 첫 로드 안내 문구', await page.locator('.empty-state').isVisible());
+  const emptyActive0 = await page.locator('#bookingList .empty-state').isVisible();
+  const emptyDone0 = await page.locator('#doneList .empty-state').isVisible();
+  log('빈 상태: 예약·완료 두 섹션 모두 안내 문구', emptyActive0 && emptyDone0);
 
   // 2. 날짜 옵션: 월요일 휴무 제외
   const dateLabels = await page.locator('#pickupDate option').allInnerTexts();
@@ -132,6 +138,12 @@ async function addBooking(page, name, phone, opts) {
   await page.locator('.booking-card', { hasText: '박반납' }).locator('.status-select').selectOption('픽업완료');
   await page.waitForTimeout(200);
   const delDisabledDone = await page.locator('.booking-card', { hasText: '박반납' }).locator('.btn-delete').isDisabled();
+  // 완료 섹션 이동 검증
+  const inDone = (await page.locator('#doneList .booking-card').filter({ hasText: '박반납' }).count()) === 1;
+  const notInActive = (await page.locator('#bookingList .booking-card').filter({ hasText: '박반납' }).count()) === 0;
+  const doneTabText = await page.locator('#doneTabs .date-tab').first().innerText();
+  log('완료 항목: 픽업완료가 완료 섹션으로 이동 + 탭 건수', inDone && notInActive && doneTabText.includes('1건'),
+    `done탭="${doneTabText}", 예약목록잔존=${!notInActive}`);
   await page.locator('.booking-card', { hasText: '박반납' }).locator('.status-select').selectOption('접수');
   await page.waitForTimeout(200);
   const delEnabledBack = !(await page.locator('.booking-card', { hasText: '박반납' }).locator('.btn-delete').isDisabled());
@@ -166,15 +178,30 @@ async function addBooking(page, name, phone, opts) {
   log('[D] 삭제: confirm→제거→새로고침에도 삭제 유지', delConfirm && !namesAfter.includes('박반납') && store3.bookings.length === 1,
     `남은=${namesAfter.join(',')}, 저장소 건수=${store3.bookings.length}`);
 
+  // 10-1. 날짜 탭: 다른 날짜 예약 추가 → 탭 2개·건수 표시·전환
+  dialogs.length = 0;
+  await addBooking(page, '남다른날', '010-2222-3333', { hour: '09', min: '00', dateIndex: 1, noWait: true });
+  const tabTexts = await page.locator('#bookingTabs .date-tab').allInnerTexts();
+  await page.locator('#bookingTabs .date-tab').nth(1).click();
+  await page.waitForTimeout(200);
+  const secondTabNames = await page.locator('#bookingList .booking-card .name').allInnerTexts();
+  const secondActive = await page.locator('#bookingTabs .date-tab').nth(1).evaluate((el) => el.classList.contains('active'));
+  log('날짜 탭: 날짜별 그룹핑 + 월/일·건수 라벨 + 탭 전환',
+    tabTexts.length === 2 && tabTexts.every((t) => /\d+\/\d+ \(.+\) · \d+건/.test(t)) && secondTabNames.includes('남다른날') && secondActive,
+    `탭=[${tabTexts.join(' | ')}]`);
+  await page.locator('#bookingList .booking-card', { hasText: '남다른날' }).locator('.btn-delete').click();
+  await page.waitForTimeout(300);
+
   // 11. 모두 삭제 → 빈 상태 + 저장소 빈 배열
   while (await page.locator('.btn-delete').count()) {
     await page.locator('.btn-delete').first().click();
     await page.waitForTimeout(150);
   }
-  const emptyAgain = await page.locator('.empty-state').isVisible();
+  const emptyAgain = await page.locator('#bookingList .empty-state').isVisible();
   const store4 = await getStore(page);
   await page.reload();
-  const emptyAfterReload = await page.locator('.empty-state').isVisible();
+  const emptyAfterReload = (await page.locator('#bookingList .empty-state').isVisible()) &&
+    (await page.locator('#doneList .empty-state').isVisible());
   log('모두 삭제: 빈 상태 + 저장소 빈 배열 + 새로고침 유지',
     emptyAgain && store4.bookings.length === 0 && emptyAfterReload);
 

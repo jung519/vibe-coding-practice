@@ -266,6 +266,34 @@
       text-align: center;
     }
     .list-area { display: flex; flex-direction: column; gap: 12px; }
+
+    /* ── 날짜 탭 ── */
+    .date-tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      margin-bottom: 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .date-tab {
+      flex-shrink: 0;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1.5px solid #e8ddd0;
+      background: #fff;
+      font-size: 0.85rem;
+      color: #6b5b50;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .date-tab.active {
+      background: #c4713b;
+      border-color: #c4713b;
+      color: #fff;
+      font-weight: 700;
+    }
     .empty-state {
       background: #fff;
       border: 1.5px dashed #e0d5c5;
@@ -617,7 +645,12 @@
     </form>
 
     <h3 class="list-title">예약 목록</h3>
+    <div class="date-tabs" id="bookingTabs"></div>
     <div class="list-area" id="bookingList"></div>
+
+    <h3 class="list-title">완료 항목</h3>
+    <div class="date-tabs" id="doneTabs"></div>
+    <div class="list-area" id="doneList"></div>
   </section>
 
   <!-- 특징 -->
@@ -723,6 +756,9 @@
 
     const form = document.getElementById('bookingForm');
     const listEl = document.getElementById('bookingList');
+    const doneListEl = document.getElementById('doneList');
+    const bookingTabs = document.getElementById('bookingTabs');
+    const doneTabs = document.getElementById('doneTabs');
     const hourSelect = document.getElementById('timeHour');
     const minSelect = document.getElementById('timeMin');
     const dateSelect = document.getElementById('pickupDate');
@@ -932,79 +968,119 @@
       render();
     }
 
-    // ── [R] 목록 그리기: 날짜·시간 순 정렬 ──
-    function render() {
-      listEl.innerHTML = '';
+    // ── [R] 목록 그리기: 예약(진행)/완료 분리 + 날짜 탭 그룹핑 ──
+    let activeDateSel = null; // 예약 목록에서 선택된 날짜
+    let doneDateSel = null;   // 완료 항목에서 선택된 날짜
 
-      if (bookings.length === 0) {
-        listEl.innerHTML =
-          '<div class="empty-state">' +
-          '<span class="emoji">🌅</span>' +
-          '아직 예약이 없어요.<br>첫 예약을 기다리고 있습니다!' +
-          '</div>';
-        return;
+    function dateLabel(d) {
+      const p = d.split('-');
+      const dt = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+      return Number(p[1]) + '/' + Number(p[2]) + ' (' + DAY_NAMES[dt.getDay()] + ')';
+    }
+
+    // 예약 카드 한 장 만들기 (두 섹션 공용)
+    function makeCard(b) {
+      const card = document.createElement('div');
+      card.className = 'booking-card';
+
+      const info = document.createElement('div');
+      info.className = 'booking-info';
+      info.innerHTML =
+        '<div class="top">' +
+        '<span class="name"></span>' +
+        '<span class="time"></span>' +
+        '<span class="status-badge"></span>' +
+        '</div>' +
+        '<div class="menu"></div>' +
+        (b.note ? '<div class="note"></div>' : '');
+      info.querySelector('.name').textContent = b.name;
+      info.querySelector('.time').textContent = '픽업 ' + b.time; // 날짜는 탭이 알려주므로 시간만
+      const badge = info.querySelector('.status-badge');
+      badge.textContent = b.status;
+      badge.classList.add('status-' + b.status);
+      info.querySelector('.menu').textContent = b.menu + ' × ' + b.qty + ' · ' + b.phone;
+      if (b.note) info.querySelector('.note').textContent = '요청: ' + b.note;
+
+      const controls = document.createElement('div');
+      controls.className = 'booking-controls';
+
+      const statusSel = document.createElement('select');
+      statusSel.className = 'status-select';
+      STATUSES.forEach(function (s) {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        if (s === b.status) opt.selected = true;
+        statusSel.appendChild(opt);
+      });
+      statusSel.addEventListener('change', function () { updateStatus(b.id, statusSel.value); });
+
+      const delWrap = document.createElement('div');
+      delWrap.className = 'del-wrap';
+      const del = document.createElement('button');
+      del.className = 'btn-delete';
+      del.textContent = '삭제';
+      del.disabled = !isDeletable(b); // 확정·픽업완료는 삭제 잠금
+      del.addEventListener('click', function () { removeBooking(b.id); });
+      delWrap.appendChild(del);
+      if (!isDeletable(b)) {
+        delWrap.classList.add('locked');
+        delWrap.setAttribute('data-tip', '확정 이후 취소 불가능');
       }
 
-      const sorted = bookings.slice().sort(function (a, b) {
-        return (a.pickupDate + a.time).localeCompare(b.pickupDate + b.time);
+      controls.appendChild(statusSel);
+      controls.appendChild(delWrap);
+      card.appendChild(info);
+      card.appendChild(controls);
+      return card;
+    }
+
+    // 한 섹션(탭 + 목록) 그리기: 날짜별 그룹 → 탭(월/일·건수) → 선택 날짜의 카드만
+    function renderSection(tabsEl, areaEl, items, selected, setSelected, emptyHtml) {
+      tabsEl.innerHTML = '';
+      areaEl.innerHTML = '';
+
+      if (items.length === 0) {
+        tabsEl.style.display = 'none';
+        areaEl.innerHTML = emptyHtml;
+        return null;
+      }
+
+      const groups = {};
+      items.forEach(function (b) {
+        (groups[b.pickupDate] = groups[b.pickupDate] || []).push(b);
+      });
+      const dates = Object.keys(groups).sort();
+      if (dates.indexOf(selected) === -1) selected = dates[0]; // 선택 날짜가 사라지면 첫 날짜로
+
+      tabsEl.style.display = 'flex';
+      dates.forEach(function (d) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'date-tab' + (d === selected ? ' active' : '');
+        btn.textContent = dateLabel(d) + ' · ' + groups[d].length + '건';
+        btn.addEventListener('click', function () { setSelected(d); render(); });
+        tabsEl.appendChild(btn);
       });
 
-      sorted.forEach(function (b) {
-        const card = document.createElement('div');
-        card.className = 'booking-card';
+      groups[selected].slice()
+        .sort(function (a, b) { return a.time.localeCompare(b.time); })
+        .forEach(function (b) { areaEl.appendChild(makeCard(b)); });
 
-        const info = document.createElement('div');
-        info.className = 'booking-info';
-        info.innerHTML =
-          '<div class="top">' +
-          '<span class="name"></span>' +
-          '<span class="time"></span>' +
-          '<span class="status-badge"></span>' +
-          '</div>' +
-          '<div class="menu"></div>' +
-          (b.note ? '<div class="note"></div>' : '');
-        info.querySelector('.name').textContent = b.name;
-        info.querySelector('.time').textContent = b.pickupDate.slice(5).replace('-', '/') + ' ' + b.time;
-        const badge = info.querySelector('.status-badge');
-        badge.textContent = b.status;
-        badge.classList.add('status-' + b.status);
-        info.querySelector('.menu').textContent = b.menu + ' × ' + b.qty + ' · ' + b.phone;
-        if (b.note) info.querySelector('.note').textContent = '요청: ' + b.note;
+      return selected;
+    }
 
-        const controls = document.createElement('div');
-        controls.className = 'booking-controls';
+    function render() {
+      const active = bookings.filter(function (b) { return b.status !== '픽업완료'; });
+      const done = bookings.filter(function (b) { return b.status === '픽업완료'; });
 
-        const statusSel = document.createElement('select');
-        statusSel.className = 'status-select';
-        STATUSES.forEach(function (s) {
-          const opt = document.createElement('option');
-          opt.value = s;
-          opt.textContent = s;
-          if (s === b.status) opt.selected = true;
-          statusSel.appendChild(opt);
-        });
-        statusSel.addEventListener('change', function () { updateStatus(b.id, statusSel.value); });
+      activeDateSel = renderSection(bookingTabs, listEl, active, activeDateSel,
+        function (d) { activeDateSel = d; },
+        '<div class="empty-state"><span class="emoji">🌅</span>아직 예약이 없어요.<br>첫 예약을 기다리고 있습니다!</div>');
 
-        const delWrap = document.createElement('div');
-        delWrap.className = 'del-wrap';
-        const del = document.createElement('button');
-        del.className = 'btn-delete';
-        del.textContent = '삭제';
-        del.disabled = !isDeletable(b); // 확정·픽업완료는 삭제 잠금
-        del.addEventListener('click', function () { removeBooking(b.id); });
-        delWrap.appendChild(del);
-        if (!isDeletable(b)) {
-          // 마우스 오버 시 말풍선으로 잠금 사유 안내
-          delWrap.classList.add('locked');
-          delWrap.setAttribute('data-tip', '확정 이후 취소 불가능');
-        }
-
-        controls.appendChild(statusSel);
-        controls.appendChild(delWrap);
-        card.appendChild(info);
-        card.appendChild(controls);
-        listEl.appendChild(card);
-      });
+      doneDateSel = renderSection(doneTabs, doneListEl, done, doneDateSel,
+        function (d) { doneDateSel = d; },
+        '<div class="empty-state"><span class="emoji">📦</span>아직 완료된 픽업이 없어요.</div>');
     }
 
     render(); // [R] 첫 로드: localStorage에서 복원된 목록 표시
