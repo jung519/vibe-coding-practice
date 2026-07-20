@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>모닝브루 ERD — reservations 테이블 설계 (B-11-R1)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #faf8f5;
+      color: #3b2f2f;
+      line-height: 1.7;
+    }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 48px 24px 80px; }
+    h1 { font-size: 1.6rem; color: #5c3d2e; margin-bottom: 6px; }
+    .sub { color: #8a7a6e; font-size: 0.92rem; margin-bottom: 28px; }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 28px 24px;
+      box-shadow: 0 2px 12px rgba(92, 61, 46, 0.08);
+      margin-bottom: 24px;
+      overflow-x: auto;
+    }
+    .card h2 { font-size: 1.1rem; color: #c4713b; margin-bottom: 14px; }
+    .mermaid { display: flex; justify-content: center; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th {
+      background: #fdf8ee; color: #5c3d2e; text-align: left;
+      padding: 9px 12px; border: 1px solid #eee2d0; font-size: 0.8rem;
+    }
+    td { padding: 8px 12px; border: 1px solid #f0e6d0; }
+    tr:nth-child(even) td { background: #faf8f5; }
+    .ok { color: #3a7a3a; font-weight: 700; }
+    .no { color: #c0504d; font-weight: 700; }
+    .note { font-size: 0.8rem; color: #a08a70; margin-top: 10px; }
+    footer { text-align: center; font-size: 0.78rem; color: #b0a090; margin-top: 32px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>☕ 모닝브루 — 예약 데이터 ERD</h1>
+    <p class="sub">B-11-R1 · Supabase <code>reservations</code> 테이블 설계 · 2026-07-20 · 유래: Day 04 확정 JSON 12필드 → B-10-O4 스키마 초안</p>
+
+    <div class="card">
+      <h2>ERD</h2>
+      <pre class="mermaid">
+erDiagram
+    RESERVATIONS {
+        uuid id PK "gen_random_uuid()"
+        text name "예약자 이름 (not null)"
+        text phone "숫자만 10~11자리 (not null)"
+        text menu "메뉴명+가격 문자열 (not null)"
+        smallint qty "1~3 check (default 1)"
+        date pickup_date "픽업 날짜 (not null)"
+        text pickup_time "HH:MM (not null)"
+        text note "요청사항 (nullable)"
+        text status "접수/확정/픽업완료/취소 (default 접수)"
+        timestamptz consent_at "동의 시각 (not null)"
+        timestamptz created_at "default now() — 파기 기준"
+        timestamptz updated_at "default now()"
+    }
+    MENUS {
+        uuid id PK "향후(Day13+) — 현재는 menu 문자열"
+        text title "메뉴명"
+        int price "가격"
+        boolean soldout "품절"
+    }
+    RESERVATIONS }o..o| MENUS : "향후 FK 예정 (점선=미구현)"
+      </pre>
+      <p class="note">오늘 만드는 것은 <strong>reservations 1개</strong> (교재 범위). MENUS는 향후 확장 자리 — 현재는 메뉴를 문자열로 저장해 localStorage 구조와 동일하게 유지.</p>
+    </div>
+
+    <div class="card">
+      <h2>RLS 설계 — 익명 키(publishable)로 되는 것 / 안 되는 것</h2>
+      <table>
+        <thead><tr><th>동작</th><th>익명 허용?</th><th>이유</th></tr></thead>
+        <tbody>
+          <tr><td>INSERT (예약 접수)</td><td class="ok">✅ 허용</td><td>고객 예약이 서버(사장)에게 모이는 채널 — 오늘의 목적</td></tr>
+          <tr><td>SELECT (조회)</td><td class="no">⛔ 금지</td><td>예약(개인정보) 공개 조회 차단 — 조회는 RPC 통로(slot_status·my_reservations)로만</td></tr>
+          <tr><td>UPDATE / DELETE</td><td class="no">⛔ 금지</td><td>변조·삭제 차단 — 고객 취소는 cancel_reservation RPC로만</td></tr>
+          <tr><td>사장 확인</td><td>대시보드 로그인</td><td>Table Editor에서 확인 (Day 13에서 관리 화면 개선 예정)</td></tr>
+        </tbody>
+      </table>
+      <p class="note">규칙 승계: 슬롯 상한(날짜+시간별 3잔)·영업시간(08~10시)·월요일 휴무는 <strong>서버가 강제</strong>(check 제약 + INSERT 트리거). 1개월 파기는 운영 정책(created_at 기준).</p>
+    </div>
+
+    <footer>바이브 코딩 기초반 Day 11 · 모닝브루 (실습용)</footer>
+  </div>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>
