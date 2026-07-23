@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>바이브 코딩 실습 — 산출물 허브</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #faf8f5; color: #3b2f2f; line-height: 1.7;
+    }
+    .wrap { max-width: 640px; margin: 0 auto; padding: 64px 24px 80px; }
+    h1 { font-size: 1.8rem; color: #5c3d2e; margin-bottom: 8px; }
+    .sub { color: #7a6a5e; font-size: 0.95rem; margin-bottom: 36px; }
+    .day-list { display: flex; flex-direction: column; gap: 12px; }
+    a.day-card {
+      display: block; background: #fff; border-radius: 14px; padding: 18px 22px;
+      text-decoration: none; color: #3b2f2f;
+      box-shadow: 0 2px 8px rgba(92, 61, 46, 0.06);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    a.day-card:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(92, 61, 46, 0.12); }
+    .day-card .day { font-size: 0.78rem; font-weight: 700; color: #c4713b; letter-spacing: 0.05em; }
+    .day-card .title { font-weight: 700; color: #5c3d2e; margin: 2px 0; }
+    .day-card .desc { font-size: 0.85rem; color: #8a7a6e; }
+    footer { margin-top: 48px; font-size: 0.8rem; color: #b0a090; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>바이브 코딩 실습</h1>
+    <p class="sub">일차별 산출물 모음 — 카페 「모닝브루」 프로젝트</p>
+
+    <div class="day-list">
+      <a class="day-card" href="index.html">
+        <div class="day">DAY 01 → 14 (최신 — 메인)</div>
+        <div class="title">모닝브루 — 소개 + 아침 픽업 예약</div>
+        <div class="desc">통합 페이지: 메뉴 · 예약 폼 · 내 예약 확인 · Supabase 서버 저장 · 사장 로그인 관리자</div>
+      </a>
+      <a class="day-card" href="day3/B-03-O1.html">
+        <div class="day">DAY 03</div>
+        <div class="title">예약 폼 기본판 (B-03-O1)</div>
+        <div class="desc">입력→목록→삭제 첫 화면 (연습본)</div>
+      </a>
+      <a class="day-card" href="day3/B-03-O2.html">
+        <div class="day">DAY 03</div>
+        <div class="title">예약 폼 개선판 (B-03-O2)</div>
+        <div class="desc">빈 칸 검증 · 처리 중/완료 피드백 · 삭제 확인 (연습본)</div>
+      </a>
+      <a class="day-card" href="day4/B-04-O1.html">
+        <div class="day">DAY 04</div>
+        <div class="title">localStorage 영속화 + CRUD (B-04-O1)</div>
+        <div class="desc">새로고침에도 유지되는 예약 · 상태 관리 · 삭제 잠금</div>
+      </a>
+      <a class="day-card" href="day5/B-05-O1.html">
+        <div class="day">DAY 05</div>
+        <div class="title">통합 페이지 (B-05-O1)</div>
+        <div class="desc">PRD 메시지 반영("줄 서는 5분, 예약하면 0분") · 슬롯 현황 · 내 예약 확인 · 관리자 화면</div>
+      </a>
+      <a class="day-card" href="day6/B-06-O1.html">
+        <div class="day">DAY 06</div>
+        <div class="title">SEO·GEO 적용 (B-06-O1·O2)</div>
+        <div class="desc">검색 친화 제목·설명·h1 · OG 태그 · GEO 사실 단락 · 관리자 noindex</div>
+      </a>
+      <a class="day-card" href="day11/B-11-O1.html">
+        <div class="day">DAY 11</div>
+        <div class="title">Supabase 서버 연동 (B-11-O1)</div>
+        <div class="desc">서버가 단일 진실: 접수 INSERT · 슬롯 현황·내 예약·취소 RPC · RLS(익명 INSERT만)</div>
+      </a>
+      <a class="day-card" href="day13/B-13-01.html">
+        <div class="day">DAY 13 · 관리자</div>
+        <div class="title">사장 관리 화면 (B-13-01)</div>
+        <div class="desc">Supabase Auth 로그인 · 서버 예약 목록·상태 처리 · 컬럼 제한 UPDATE</div>
+      </a>
+      <a class="day-card" href="day5/admin.html">
+        <div class="day">DAY 05 · 관리자</div>
+        <div class="title">모닝브루 관리자 화면 (localStorage판)</div>
+        <div class="desc">예약 목록·완료 항목(날짜 탭) · 상태 변경 · 삭제 잠금</div>
+      </a>
+    </div>
+
+    <footer>바이브 코딩 기초반 실습 산출물 · 데모 페이지 (실제 매장 아님)</footer>
+  </div>
+</body>
+</html>

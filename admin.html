@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow"> <!-- 관리자 화면은 검색 제외 -->
+  <title>모닝브루 관리자 — 예약 관리</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #3b2f2f;
+      background: #faf8f5;
+      line-height: 1.6;
+    }
+
+    /* ── 헤더 ── */
+    .admin-header {
+      background: #5c3d2e;
+      color: #fff;
+      padding: 20px 24px;
+    }
+    .admin-header .inner {
+      max-width: 640px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .admin-header h1 { font-size: 1.15rem; font-weight: 700; }
+    .admin-header .sub { font-size: 0.78rem; opacity: 0.75; }
+    .header-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .back-link, .header-btn {
+      color: #f0e0d0;
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 8px;
+      padding: 7px 12px;
+      background: none;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .back-link:hover, .header-btn:hover { background: rgba(255, 255, 255, 0.1); }
+
+    /* ── 로그인 (사장 전용 — Supabase Auth) ── */
+    .login-wrap {
+      max-width: 380px;
+      margin: 48px auto;
+      padding: 0 24px;
+    }
+    .login-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 28px 24px;
+      box-shadow: 0 2px 12px rgba(92, 61, 46, 0.08);
+    }
+    .login-card h2 { font-size: 1.05rem; color: #5c3d2e; margin-bottom: 4px; }
+    .login-card .desc { font-size: 0.82rem; color: #a08a70; margin-bottom: 18px; }
+    .login-card label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #6b5b50;
+      margin: 12px 0 4px;
+    }
+    .login-card input {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1.5px solid #e8ddd0;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      background: #fffdfa;
+    }
+    .login-card input:focus { outline: none; border-color: #c4713b; }
+    .login-error {
+      display: none;
+      margin-top: 12px;
+      font-size: 0.82rem;
+      color: #c0504d;
+      background: #fdeeee;
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+    .login-error.show { display: block; }
+    .btn-login {
+      width: 100%;
+      margin-top: 18px;
+      background: #c4713b;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .btn-login:hover:not(:disabled) { background: #a95f2f; }
+    .btn-login:disabled { opacity: 0.6; cursor: wait; }
+
+    /* ── Section ── */
+    section { padding: 36px 24px; max-width: 640px; margin: 0 auto; }
+    .list-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #5c3d2e;
+      margin: 0 0 14px;
+    }
+    .list-area { display: flex; flex-direction: column; gap: 12px; }
+    .empty-state {
+      background: #fff;
+      border: 1.5px dashed #e0d5c5;
+      border-radius: 14px;
+      padding: 36px 20px;
+      text-align: center;
+      color: #b0a090;
+      font-size: 0.95rem;
+    }
+    .empty-state .emoji { font-size: 2rem; display: block; margin-bottom: 8px; }
+
+    /* ── 날짜 탭 ── */
+    .date-tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      margin-bottom: 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .date-tab {
+      flex-shrink: 0;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1.5px solid #e8ddd0;
+      background: #fff;
+      font-size: 0.85rem;
+      color: #6b5b50;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .date-tab.active {
+      background: #c4713b;
+      border-color: #c4713b;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    /* ── 예약 카드 ── */
+    .booking-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 18px 20px;
+      box-shadow: 0 2px 8px rgba(92, 61, 46, 0.06);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .booking-info { flex: 1; min-width: 0; }
+    .booking-info .top {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+    .booking-info .name { font-weight: 700; color: #5c3d2e; }
+    .booking-info .time {
+      background: #fdf8ee;
+      color: #a06030;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+    .booking-info .menu { font-size: 0.9rem; color: #6b5b50; }
+    .booking-info .note { font-size: 0.82rem; color: #b0a090; margin-top: 2px; }
+
+    .status-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+    .status-접수 { background: #fdf8ee; color: #a06030; }
+    .status-확정 { background: #eef7ee; color: #3a7a3a; }
+    .status-픽업완료 { background: #f0f0f0; color: #808080; }
+    .status-취소 { background: #fdeeee; color: #c0504d; }
+
+    .booking-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex-shrink: 0;
+      width: 96px;
+    }
+    .status-select {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1.5px solid #e8ddd0;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-family: inherit;
+      color: #5c3d2e;
+      background: #fffdfa;
+    }
+    .status-select:disabled { opacity: 0.5; cursor: wait; }
+
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 0.8rem;
+      color: #b0a090;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="admin-header">
+    <div class="inner">
+      <div>
+        <h1>☕ 모닝브루 관리자</h1>
+        <div class="sub">아침 픽업 예약 접수 현황 — 사장 전용</div>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="header-btn" id="refreshBtn" hidden>새로고침</button>
+        <button type="button" class="header-btn" id="logoutBtn" hidden>로그아웃</button>
+        <a class="back-link" href="index.html">← 예약 페이지</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══ 로그인 게이트 (B-13-03: Supabase Auth — 사장 계정만 존재, 가입 차단) ══ -->
+  <div class="login-wrap" id="loginView" hidden>
+    <div class="login-card">
+      <h2>🔐 사장님 로그인</h2>
+      <p class="desc">예약 정보(개인정보)는 로그인한 사장님만 볼 수 있어요.</p>
+      <form id="loginForm">
+        <label for="loginEmail">이메일</label>
+        <input type="email" id="loginEmail" autocomplete="username" required>
+        <label for="loginPassword">비밀번호</label>
+        <input type="password" id="loginPassword" autocomplete="current-password" required>
+        <div class="login-error" id="loginError"></div>
+        <button type="submit" class="btn-login" id="loginBtn">로그인</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ══ 관리 화면 (로그인 후) ══ -->
+  <div id="adminView" hidden>
+    <section>
+      <h2 class="list-title">예약 목록</h2>
+      <div class="date-tabs" id="bookingTabs"></div>
+      <div class="list-area" id="bookingList"></div>
+    </section>
+
+    <section style="padding-top: 0;">
+      <h2 class="list-title">완료 항목</h2>
+      <div class="date-tabs" id="doneTabs"></div>
+      <div class="list-area" id="doneList"></div>
+    </section>
+  </div>
+
+  <footer>
+    모닝브루 관리자 화면 · 서버(Supabase) 연동 — 파기(삭제)는 Table Editor에서
+  </footer>
+
+  <script>
+    // ═══════════════════════════════════════════════════
+    // Day 13: 서버 연동 관리 화면 (B-13-01)
+    //  - 인증: Supabase Auth (사장 계정 1개, 가입 차단) → JWT
+    //  - 조회·상태 변경: authenticated 정책 (UPDATE는 status·updated_at 컬럼만)
+    //  - 삭제 없음(의도): 파기는 Table Editor — 운영 루틴(B-13-04)
+    // ═══════════════════════════════════════════════════
+    const SUPABASE_URL = 'https://vffoydlxftzykupsqlnp.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_D-4Y6feEhZNnKDwmTuCqEw_ZyFVu5nf'; // 공개용 키 (RLS가 보호)
+    const SESSION_KEY = 'morningbrew.admin.session';
+    const STATUSES = ['접수', '확정', '픽업완료', '취소'];
+    const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
+
+    function nowISO() {
+      const d = new Date();
+      const off = -d.getTimezoneOffset();
+      const sign = off >= 0 ? '+' : '-';
+      const pad = function (n, w) { return String(Math.abs(n)).padStart(w || 2, '0'); };
+      return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+        'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()) +
+        '.' + pad(d.getMilliseconds(), 3) + sign + pad(Math.floor(off / 60)) + ':' + pad(off % 60);
+    }
+
+    // ── 세션 (브라우저 세션 한정 — 탭 닫으면 로그아웃) ──
+    function getSession() {
+      try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)); } catch (e) { return null; }
+    }
+    function setSession(s) {
+      if (s) sessionStorage.setItem(SESSION_KEY, JSON.stringify(s));
+      else sessionStorage.removeItem(SESSION_KEY);
+    }
+
+    // ── 인증: 비밀번호 로그인 / 토큰 갱신 ──
+    async function login(email, password) {
+      const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, password: password })
+      });
+      const data = await res.json().catch(function () { return {}; });
+      if (!res.ok) throw new Error(data.error_description || data.msg || '로그인 실패');
+      setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
+    }
+
+    async function refreshSession() {
+      const s = getSession();
+      if (!s || !s.refresh_token) return false;
+      const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: s.refresh_token })
+      });
+      if (!res.ok) { setSession(null); return false; }
+      const data = await res.json();
+      setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
+      return true;
+    }
+
+    // ── 인증 포함 REST 호출 (401 → 갱신 1회 재시도) ──
+    async function api(path, opts, retried) {
+      const s = getSession();
+      if (!s) throw new Error('NO_SESSION');
+      opts = opts || {};
+      // Authorization은 항상 현재 세션 토큰으로 — 재시도 시 만료 토큰이 남지 않게 마지막에 덮어쓴다
+      const headers = Object.assign({
+        'apikey': SUPABASE_KEY,
+        'Content-Type': 'application/json'
+      }, opts.headers || {});
+      headers['Authorization'] = 'Bearer ' + s.access_token;
+      const res = await fetch(SUPABASE_URL + '/rest/v1' + path,
+        Object.assign({}, opts, { headers: headers }));
+      if (res.status === 401 && !retried) {
+        const ok = await refreshSession();
+        if (ok) return api(path, opts, true);
+        throw new Error('NO_SESSION');
+      }
+      return res;
+    }
+
+    // ── 화면 전환 ──
+    const loginView = document.getElementById('loginView');
+    const adminView = document.getElementById('adminView');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    function showLogin() {
+      setSession(null);
+      loginView.hidden = false;
+      adminView.hidden = true;
+      refreshBtn.hidden = true;
+      logoutBtn.hidden = true;
+    }
+    async function showAdmin() {
+      loginView.hidden = true;
+      adminView.hidden = false;
+      refreshBtn.hidden = false;
+      logoutBtn.hidden = false;
+      await loadAndRender();
+    }
+
+    // ── 로그인 폼 ──
+    const loginForm = document.getElementById('loginForm');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginError = document.getElementById('loginError');
+    loginForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      loginError.classList.remove('show');
+      loginBtn.disabled = true;
+      loginBtn.textContent = '확인 중…';
+      try {
+        await login(document.getElementById('loginEmail').value.trim(),
+                    document.getElementById('loginPassword').value);
+        await showAdmin();
+      } catch (err) {
+        loginError.textContent = '⚠️ 이메일 또는 비밀번호가 올바르지 않습니다.';
+        loginError.classList.add('show');
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = '로그인';
+      }
+    });
+
+    logoutBtn.addEventListener('click', showLogin);
+    refreshBtn.addEventListener('click', function () { loadAndRender(); });
+
+    // ── [R] 서버에서 예약 읽기 ──
+    let bookings = [];
+    async function loadAndRender() {
+      try {
+        const res = await api('/reservations?select=*&order=pickup_date.asc,pickup_time.asc');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        bookings = await res.json();
+        render();
+      } catch (err) {
+        if (err.message === 'NO_SESSION') { showLogin(); return; }
+        alert('⚠️ 예약을 불러오지 못했습니다. 네트워크 확인 후 새로고침해 주세요.');
+      }
+    }
+
+    // ── [U] 상태 변경 (서버 정책: status·updated_at만 수정 가능) ──
+    async function updateStatus(b, newStatus, selectEl) {
+      if (b.status === newStatus) return;
+      selectEl.disabled = true;
+      try {
+        const res = await api('/reservations?id=eq.' + encodeURIComponent(b.id), {
+          method: 'PATCH',
+          headers: { 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ status: newStatus, updated_at: nowISO() })
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        b.status = newStatus;
+      } catch (err) {
+        if (err.message === 'NO_SESSION') { showLogin(); return; }
+        alert('⚠️ 상태 변경이 저장되지 않았습니다. 다시 시도해 주세요.');
+      } finally {
+        render();
+      }
+    }
+
+    const listEl = document.getElementById('bookingList');
+    const doneListEl = document.getElementById('doneList');
+    const bookingTabs = document.getElementById('bookingTabs');
+    const doneTabs = document.getElementById('doneTabs');
+
+    function phoneDigits(v) { return String(v || '').replace(/\D/g, '').slice(0, 11); }
+    function formatPhone(v) {
+      const d = phoneDigits(v);
+      if (d.length <= 3) return d;
+      if (d.length <= 7) return d.slice(0, 3) + '-' + d.slice(3);
+      return d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7);
+    }
+
+    // ── 목록 그리기: 예약(접수·확정)/완료(픽업완료·취소) 분리 + 날짜 탭 ──
+    let activeDateSel = null;
+    let doneDateSel = null;
+
+    function dateLabel(d) {
+      const p = d.split('-');
+      const dt = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+      return Number(p[1]) + '/' + Number(p[2]) + ' (' + DAY_NAMES[dt.getDay()] + ')';
+    }
+
+    function makeCard(b) {
+      const card = document.createElement('div');
+      card.className = 'booking-card';
+
+      const info = document.createElement('div');
+      info.className = 'booking-info';
+      info.innerHTML =
+        '<div class="top">' +
+        '<span class="name"></span>' +
+        '<span class="time"></span>' +
+        '<span class="status-badge"></span>' +
+        '</div>' +
+        '<div class="menu"></div>' +
+        (b.note ? '<div class="note"></div>' : '');
+      info.querySelector('.name').textContent = b.name;
+      info.querySelector('.time').textContent = '픽업 ' + b.pickup_time;
+      const badge = info.querySelector('.status-badge');
+      badge.textContent = b.status;
+      badge.classList.add('status-' + b.status);
+      info.querySelector('.menu').textContent = b.menu + ' × ' + b.qty + ' · ' + formatPhone(b.phone);
+      if (b.note) info.querySelector('.note').textContent = '요청: ' + b.note;
+
+      const controls = document.createElement('div');
+      controls.className = 'booking-controls';
+
+      const statusSel = document.createElement('select');
+      statusSel.className = 'status-select';
+      STATUSES.forEach(function (s) {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        if (s === b.status) opt.selected = true;
+        statusSel.appendChild(opt);
+      });
+      statusSel.addEventListener('change', function () { updateStatus(b, statusSel.value, statusSel); });
+
+      controls.appendChild(statusSel);
+      card.appendChild(info);
+      card.appendChild(controls);
+      return card;
+    }
+
+    function renderSection(tabsEl, areaEl, items, selected, setSelected, emptyHtml) {
+      tabsEl.innerHTML = '';
+      areaEl.innerHTML = '';
+
+      if (items.length === 0) {
+        tabsEl.style.display = 'none';
+        areaEl.innerHTML = emptyHtml;
+        return null;
+      }
+
+      const groups = {};
+      items.forEach(function (b) {
+        (groups[b.pickup_date] = groups[b.pickup_date] || []).push(b);
+      });
+      const dates = Object.keys(groups).sort();
+      if (dates.indexOf(selected) === -1) selected = dates[0];
+
+      tabsEl.style.display = 'flex';
+      dates.forEach(function (d) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'date-tab' + (d === selected ? ' active' : '');
+        btn.textContent = dateLabel(d) + ' · ' + groups[d].length + '건';
+        btn.addEventListener('click', function () { setSelected(d); render(); });
+        tabsEl.appendChild(btn);
+      });
+
+      groups[selected].slice()
+        .sort(function (a, b) { return a.pickup_time.localeCompare(b.pickup_time); })
+        .forEach(function (b) { areaEl.appendChild(makeCard(b)); });
+
+      return selected;
+    }
+
+    function render() {
+      // 진행 = 접수·확정 / 완료 = 픽업완료·취소 (취소는 처리 끝난 항목 — 완료 쪽)
+      const active = bookings.filter(function (b) { return b.status === '접수' || b.status === '확정'; });
+      const done = bookings.filter(function (b) { return b.status === '픽업완료' || b.status === '취소'; });
+
+      activeDateSel = renderSection(bookingTabs, listEl, active, activeDateSel,
+        function (d) { activeDateSel = d; },
+        '<div class="empty-state"><span class="emoji">🌅</span>아직 예약이 없어요.</div>');
+
+      doneDateSel = renderSection(doneTabs, doneListEl, done, doneDateSel,
+        function (d) { doneDateSel = d; },
+        '<div class="empty-state"><span class="emoji">📦</span>아직 완료된 픽업이 없어요.</div>');
+    }
+
+    // ── 시작: 세션 있으면 바로 관리 화면 ──
+    if (getSession()) showAdmin();
+    else showLogin();
+  </script>
+</body>
+</html>
