@@ -273,6 +273,19 @@
       text-align: center;
     }
     .success-box.show { display: block; }
+    .success-lookup-btn {
+      margin-top: 10px;
+      background: #3a7a3a;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .success-lookup-btn:active { transform: scale(0.97); }
 
     /* ── 예약 목록 ── */
     .list-title {
@@ -1062,7 +1075,23 @@
         });
 
         if (res.ok) {
-          successBox.textContent = '✅ 접수됐습니다! ' + dateLabel + ' ' + time + '에 준비해 둘게요. (' + nameInput.value.trim() + '님, ' + menu + ' × ' + qty + ')';
+          const okName = nameInput.value.trim();
+          const okPhone = phoneDigits(phoneInput.value);
+          successBox.textContent = '✅ 접수됐습니다! ' + dateLabel + ' ' + time + '에 준비해 둘게요. (' + okName + '님, ' + menu + ' × ' + qty + ')';
+          // M1-②(Day 16): 접수 직후가 확인 습관을 만들 최적 시점 — 방금 정보로 바로 조회
+          const goLookup = document.createElement('button');
+          goLookup.type = 'button';
+          goLookup.className = 'success-lookup-btn';
+          goLookup.textContent = '📋 내 예약 확인하기';
+          goLookup.addEventListener('click', function () {
+            lookupPanel.hidden = false;
+            lookupName.value = okName;
+            lookupPhone.value = formatPhone(okPhone);
+            lookupRun.click();
+            lookupPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          });
+          successBox.appendChild(document.createElement('br'));
+          successBox.appendChild(goLookup);
           successBox.classList.add('show');
           // 측정(Day 14): 예약 전환 이벤트 — 이름·전화는 싣지 않는다
           if (window.umami) umami.track('reservation_complete', { menu: menu, qty: qty });
