@@ -617,6 +617,108 @@
       box-shadow: 0 4px 14px rgba(92, 61, 46, 0.25);
     }
 
+    /* ── 상점 (Day 17) ── */
+    .product-card .desc-text { font-size: 0.8rem; color: #a08a70; margin: 2px 0 8px; }
+    .btn-add {
+      margin-top: 6px;
+      background: #fdf8ee;
+      color: #a06030;
+      border: 1.5px solid #eee2d0;
+      border-radius: 8px;
+      padding: 7px 16px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-add:active { background: #f5ead5; }
+    .cart-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 22px 20px;
+      box-shadow: 0 2px 12px rgba(92, 61, 46, 0.08);
+      margin-top: 20px;
+    }
+    .cart-card h3 { font-size: 1rem; color: #5c3d2e; margin-bottom: 12px; }
+    .cart-empty { font-size: 0.88rem; color: #b0a090; text-align: center; padding: 14px 0; }
+    .cart-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 0;
+      border-bottom: 1px solid #f5ede0;
+      font-size: 0.88rem;
+    }
+    .cart-row .cname { flex: 1; min-width: 0; color: #3b2f2f; }
+    .cart-row .qty-btn {
+      width: 26px; height: 26px;
+      border: 1.5px solid #e8ddd0;
+      background: #fffdfa;
+      border-radius: 6px;
+      color: #c4713b;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .cart-row .cqty { width: 22px; text-align: center; font-weight: 600; }
+    .cart-row .cline { width: 74px; text-align: right; font-weight: 600; color: #5c3d2e; }
+    .cart-row .cdel {
+      border: none; background: none;
+      color: #b0a090; cursor: pointer;
+      font-size: 0.95rem; font-family: inherit;
+      padding: 2px 4px;
+    }
+    .cart-row .cdel:hover { color: #d9534f; }
+    .cart-total {
+      display: flex;
+      justify-content: space-between;
+      padding-top: 12px;
+      font-weight: 700;
+      color: #5c3d2e;
+    }
+    .form-alert {
+      display: none;
+      background: #fdeeee;
+      border: 1.5px solid #f0c8c6;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      font-size: 0.88rem;
+      color: #b03330;
+      line-height: 1.6;
+    }
+    .form-alert.show { display: block; }
+    .order-success {
+      display: none;
+      background: #f0f8f0;
+      border: 1.5px solid #cde8cd;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-top: 14px;
+      font-size: 0.9rem;
+      color: #3a7a3a;
+      text-align: center;
+    }
+    .order-success.show { display: block; }
+    .recent-orders { margin-top: 24px; }
+    .recent-orders h3 { font-size: 1rem; color: #5c3d2e; margin-bottom: 10px; }
+    .order-item {
+      background: #fff;
+      border-radius: 12px;
+      padding: 12px 16px;
+      box-shadow: 0 1px 6px rgba(92, 61, 46, 0.05);
+      margin-bottom: 8px;
+      font-size: 0.85rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .order-item .who { font-weight: 600; color: #5c3d2e; }
+    .order-item .what { flex: 1; color: #8a7a6e; min-width: 120px; }
+    .order-item .amt { font-weight: 700; color: #a06030; }
+
     /* ── Footer ── */
     footer {
       text-align: center;
@@ -811,6 +913,49 @@
   </section>
 
   <!-- 위치 & 영업시간 -->
+  <section id="shop">
+    <h2 class="section-title">🛒 모닝브루 상점</h2>
+    <p class="section-sub">매장에 오지 않아도, 원두와 디저트를 주문해 두세요 — 확인 후 연락드립니다. (실습용 데모 — 가짜 정보만 입력)</p>
+
+    <div class="menu-grid" id="productGrid"></div>
+
+    <div class="cart-card">
+      <h3>🧺 장바구니</h3>
+      <div id="cartArea"></div>
+    </div>
+
+    <div class="form-card" style="margin-top: 20px;">
+      <div class="form-alert" id="orderAlert"></div>
+      <div class="field">
+        <label for="odName">이름 <span class="required-mark">*</span></label>
+        <input type="text" id="odName" placeholder="주문자 이름">
+      </div>
+      <div class="field">
+        <label for="odPhone">연락처 <span class="required-mark">*</span></label>
+        <input type="tel" id="odPhone" placeholder="010-0000-0000">
+      </div>
+      <div class="field">
+        <label for="odEmail">이메일 <span class="optional">(선택)</span></label>
+        <input type="email" id="odEmail" placeholder="you@example.com">
+      </div>
+      <div class="field">
+        <label for="odAddress">받을 주소 <span class="optional">(선택 — 픽업이면 비워두세요)</span></label>
+        <input type="text" id="odAddress" placeholder="배송 받을 주소">
+      </div>
+      <div class="field">
+        <label for="odNote">요청사항 <span class="optional">(선택)</span></label>
+        <textarea id="odNote" placeholder="예) 원두는 굵게 갈아주세요"></textarea>
+      </div>
+      <button type="button" class="btn-submit" id="orderBtn">🛒 주문하기</button>
+      <div class="order-success" id="orderSuccess"></div>
+    </div>
+
+    <div class="recent-orders">
+      <h3>📦 최근 주문</h3>
+      <div id="recentOrders"></div>
+    </div>
+  </section>
+
   <section>
     <h2 class="section-title">찾아오시는 길</h2>
     <div class="info-box">
@@ -1226,6 +1371,186 @@
     function refreshLookup() {
       if (!lookupPanel.hidden && lastLookup) renderLookup(lastLookup.nm, lastLookup.ph);
     }
+
+    // ══════════════ 모닝브루 상점 (Day 17) — 주문 접수 흐름 ══════════════
+    // 상품은 코드 안 배열로 시작 (교재 팁) — Day 18 M2에서 menus 테이블로 승격 예정
+    const PRODUCTS = [
+      { id: 'beans',   name: '에티오피아 예가체프 원두(200g)', desc: '아침에 볶은 싱글 오리진', price: 18000 },
+      { id: 'scone',   name: '수제 버터 스콘 4개입',           desc: '매일 아침 굽는 그 스콘',   price: 12000 },
+      { id: 'dripbag', name: '드립백 세트(10개입)',            desc: '사무실에서 즐기는 모닝브루', price: 15000 }
+    ];
+    const cart = []; // {id, name, price, qty}
+
+    const productGrid = document.getElementById('productGrid');
+    const cartArea = document.getElementById('cartArea');
+    const orderAlert = document.getElementById('orderAlert');
+    const orderSuccess = document.getElementById('orderSuccess');
+    const orderBtn = document.getElementById('orderBtn');
+    const odPhone = document.getElementById('odPhone');
+    odPhone.addEventListener('input', function () { odPhone.value = formatPhone(odPhone.value); });
+
+    function won(n) { return n.toLocaleString('ko-KR') + '원'; }
+
+    PRODUCTS.forEach(function (p) {
+      const card = document.createElement('div');
+      card.className = 'menu-card product-card';
+      card.innerHTML =
+        '<div class="name"></div>' +
+        '<div class="desc-text"></div>' +
+        '<div class="price"></div>' +
+        '<button type="button" class="btn-add">담기</button>';
+      card.querySelector('.name').textContent = p.name;
+      card.querySelector('.desc-text').textContent = p.desc;
+      card.querySelector('.price').textContent = won(p.price);
+      card.querySelector('.btn-add').addEventListener('click', function () {
+        const found = cart.find(function (c) { return c.id === p.id; });
+        if (found) found.qty += 1;
+        else cart.push({ id: p.id, name: p.name, price: p.price, qty: 1 });
+        renderCart();
+      });
+      productGrid.appendChild(card);
+    });
+
+    function renderCart() {
+      cartArea.innerHTML = '';
+      if (cart.length === 0) {
+        cartArea.innerHTML = '<div class="cart-empty">장바구니에 상품을 담아주세요.</div>';
+        return;
+      }
+      cart.forEach(function (c) {
+        const row = document.createElement('div');
+        row.className = 'cart-row';
+        row.innerHTML =
+          '<span class="cname"></span>' +
+          '<button type="button" class="qty-btn qminus">−</button>' +
+          '<span class="cqty"></span>' +
+          '<button type="button" class="qty-btn qplus">+</button>' +
+          '<span class="cline"></span>' +
+          '<button type="button" class="cdel" aria-label="삭제">✕</button>';
+        row.querySelector('.cname').textContent = c.name;
+        row.querySelector('.cqty').textContent = c.qty;
+        row.querySelector('.cline').textContent = won(c.price * c.qty);
+        row.querySelector('.qminus').addEventListener('click', function () {
+          c.qty -= 1;
+          if (c.qty <= 0) cart.splice(cart.indexOf(c), 1);
+          renderCart();
+        });
+        row.querySelector('.qplus').addEventListener('click', function () { c.qty += 1; renderCart(); });
+        row.querySelector('.cdel').addEventListener('click', function () {
+          cart.splice(cart.indexOf(c), 1);
+          renderCart();
+        });
+        cartArea.appendChild(row);
+      });
+      const total = document.createElement('div');
+      total.className = 'cart-total';
+      total.innerHTML = '<span>합계</span><span id="cartTotal"></span>';
+      total.querySelector('#cartTotal').textContent = won(cartTotal());
+      cartArea.appendChild(total);
+    }
+    function cartTotal() {
+      return cart.reduce(function (sum, c) { return sum + c.price * c.qty; }, 0);
+    }
+    renderCart();
+
+    function showOrderAlert(msg) {
+      orderAlert.textContent = msg;
+      orderAlert.classList.add('show');
+      orderAlert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // 주문하기: ①필수값 검사 → ②orders INSERT → ③접수 안내·비우기·목록 갱신
+    orderBtn.addEventListener('click', async function () {
+      orderAlert.classList.remove('show');
+      orderSuccess.classList.remove('show');
+
+      if (cart.length === 0) {
+        showOrderAlert('상품을 1개 이상 담아주세요.');
+        return;
+      }
+      const nm = document.getElementById('odName').value.trim();
+      const pd = phoneDigits(odPhone.value);
+      if (!nm || pd.length < 10) {
+        showOrderAlert('이름과 연락처를 입력해주세요. 연락처는 숫자 10~11자리로 적어주시면 됩니다.');
+        return;
+      }
+
+      orderBtn.disabled = true;
+      orderBtn.textContent = '⏳ 주문 접수 중…';
+      try {
+        const res = await fetch(API + '/orders', {
+          method: 'POST',
+          headers: Object.assign({ 'Prefer': 'return=minimal' }, HEADERS),
+          body: JSON.stringify({
+            customer_name: nm,
+            phone: pd,
+            email: document.getElementById('odEmail').value.trim() || null,
+            address: document.getElementById('odAddress').value.trim() || null,
+            note: document.getElementById('odNote').value.trim() || null,
+            items: JSON.stringify(cart.map(function (c) { return { name: c.name, qty: c.qty, price: c.price }; })),
+            total_price: cartTotal(),
+            status: '접수'
+          })
+        });
+        if (!res.ok) throw new Error('주문 저장 실패 HTTP ' + res.status);
+
+        if (window.umami) umami.track('order_complete', { total: cartTotal(), items: cart.length });
+        orderSuccess.textContent = '✅ 주문이 접수되었습니다. 모닝브루가 확인 후 연락드릴게요. (운영자 알림은 자동으로 전송됩니다)';
+        orderSuccess.classList.add('show');
+        cart.length = 0;
+        renderCart();
+        document.getElementById('odName').value = '';
+        odPhone.value = '';
+        document.getElementById('odEmail').value = '';
+        document.getElementById('odAddress').value = '';
+        document.getElementById('odNote').value = '';
+        await fetchOrders();
+      } catch (err) {
+        console.error(err); // 디버깅용 원본 에러
+        showOrderAlert('주문 접수에 실패했어요. 인터넷 연결을 확인하고 다시 시도해주세요. 계속되면 인스타 DM으로 연락 주세요.');
+      } finally {
+        orderBtn.disabled = false;
+        orderBtn.textContent = '🛒 주문하기';
+      }
+    });
+
+    // 최근 주문: 저장→다시 SELECT→새로고침에도 유지 (데이터 영속화)
+    // 공개 화면에는 이름·상품·총액·상태만 — 전화·이메일·주소는 표시하지 않는다 (교재 원칙)
+    async function fetchOrders() {
+      const box = document.getElementById('recentOrders');
+      try {
+        const res = await fetch(API + '/orders?select=customer_name,items,total_price,status,created_at&order=created_at.desc&limit=5', { headers: HEADERS });
+        if (!res.ok) throw new Error('주문 목록 조회 실패 HTTP ' + res.status);
+        const rows = await res.json();
+        box.innerHTML = '';
+        if (rows.length === 0) {
+          box.innerHTML = '<div class="cart-empty">아직 주문이 없어요 — 첫 주문의 주인공이 되어 주세요!</div>';
+          return;
+        }
+        rows.forEach(function (o) {
+          let what = '';
+          try {
+            const items = JSON.parse(o.items);
+            what = items[0].name.split('(')[0] + ' ×' + items[0].qty +
+              (items.length > 1 ? ' 외 ' + (items.length - 1) + '건' : '');
+          } catch (e) { what = '주문 상품'; }
+          const div = document.createElement('div');
+          div.className = 'order-item';
+          div.innerHTML = '<span class="who"></span><span class="what"></span><span class="amt"></span><span class="status-badge"></span>';
+          div.querySelector('.who').textContent = o.customer_name + ' 님';
+          div.querySelector('.what').textContent = what;
+          div.querySelector('.amt').textContent = won(o.total_price);
+          const badge = div.querySelector('.status-badge');
+          badge.textContent = o.status;
+          badge.classList.add('status-' + o.status);
+          box.appendChild(div);
+        });
+      } catch (err) {
+        console.error(err);
+        box.innerHTML = '<div class="cart-empty">주문 목록을 불러오지 못했어요.</div>';
+      }
+    }
+    fetchOrders();
 
     // ══════════════ 관리자 페이지 이동 (토스트 → 자동 이동) ══════════════
     const toast = document.getElementById('toast');
