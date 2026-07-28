@@ -58,3 +58,18 @@ end $$;
 create trigger notify_slack_on_order
   after insert on orders
   for each row execute function public.notify_slack_order();
+
+-- ═══════════════════════════════════════════════════════════
+-- (추가 2026-07-28) 사장 관리 화면에서 주문 확인·상태 관리
+-- 배경: 주문 확인 경로가 슬랙·Table Editor뿐 — 관리자 화면 통합 (사장 요청)
+-- ═══════════════════════════════════════════════════════════
+
+-- 로그인한 사장: 전체 조회 + 상태만 수정 (reservations와 같은 원칙)
+create policy "owner_select_orders" on orders
+  for select to authenticated using (true);
+
+create policy "owner_update_orders" on orders
+  for update to authenticated using (true) with check (true);
+
+revoke update on orders from authenticated;
+grant update (status) on orders to authenticated;

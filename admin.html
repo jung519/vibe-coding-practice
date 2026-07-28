@@ -192,6 +192,11 @@
     .status-확정 { background: #eef7ee; color: #3a7a3a; }
     .status-픽업완료 { background: #f0f0f0; color: #808080; }
     .status-취소 { background: #fdeeee; color: #c0504d; }
+    .status-확인 { background: #eef2fb; color: #3d6ca8; }
+    .status-완료 { background: #f0f0f0; color: #808080; }
+    .order-lines { font-size: 0.85rem; color: #6b5b50; margin-top: 2px; }
+    .order-meta { font-size: 0.8rem; color: #a08a70; margin-top: 4px; line-height: 1.5; }
+    .order-total { font-weight: 700; color: #a06030; font-size: 0.9rem; margin-top: 4px; }
 
     .booking-controls {
       display: flex;
@@ -264,6 +269,11 @@
       <h2 class="list-title">완료 항목</h2>
       <div class="date-tabs" id="doneTabs"></div>
       <div class="list-area" id="doneList"></div>
+    </section>
+
+    <section style="padding-top: 0;">
+      <h2 class="list-title">🛒 주문 (상점)</h2>
+      <div class="list-area" id="orderList"></div>
     </section>
   </div>
 
@@ -369,6 +379,7 @@
       refreshBtn.hidden = false;
       logoutBtn.hidden = false;
       await loadAndRender();
+      await loadOrders();
     }
 
     // ── 로그인 폼 ──
@@ -394,7 +405,7 @@
     });
 
     logoutBtn.addEventListener('click', showLogin);
-    refreshBtn.addEventListener('click', function () { loadAndRender(); });
+    refreshBtn.addEventListener('click', function () { loadAndRender(); loadOrders(); });
 
     // ── [R] 서버에서 예약 읽기 ──
     let bookings = [];
@@ -541,6 +552,98 @@
       doneDateSel = renderSection(doneTabs, doneListEl, done, doneDateSel,
         function (d) { doneDateSel = d; },
         '<div class="empty-state"><span class="emoji">📦</span>아직 완료된 픽업이 없어요.</div>');
+    }
+
+    // ══ 주문 (상점) — 사장에겐 전체 정보, 상태만 수정 가능 ══
+    const ORDER_STATUSES = ['접수', '확인', '완료', '취소'];
+    const orderListEl = document.getElementById('orderList');
+
+    async function loadOrders() {
+      try {
+        const res = await api('/orders?select=*&order=created_at.desc&limit=30');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        renderOrders(await res.json());
+      } catch (err) {
+        if (err.message === 'NO_SESSION') { showLogin(); return; }
+        orderListEl.innerHTML = '<div class="empty-state"><span class="emoji">⚠️</span>주문을 불러오지 못했어요.<br>새로고침해 주세요. (주문 정책 SQL 실행 전이면 이 상태가 정상)</div>';
+      }
+    }
+
+    function renderOrders(orders) {
+      orderListEl.innerHTML = '';
+      if (orders.length === 0) {
+        orderListEl.innerHTML = '<div class="empty-state"><span class="emoji">🛒</span>아직 주문이 없어요.</div>';
+        return;
+      }
+      orders.forEach(function (o) {
+        const card = document.createElement('div');
+        card.className = 'booking-card';
+
+        let lines = [];
+        try {
+          lines = JSON.parse(o.items).map(function (i) { return i.name + ' ×' + i.qty; });
+        } catch (e) { lines = [String(o.items).slice(0, 60)]; }
+
+        const info = document.createElement('div');
+        info.className = 'booking-info';
+        info.innerHTML =
+          '<div class="top">' +
+          '<span class="name"></span>' +
+          '<span class="time"></span>' +
+          '<span class="status-badge"></span>' +
+          '</div>' +
+          '<div class="order-lines"></div>' +
+          '<div class="order-total"></div>' +
+          '<div class="order-meta"></div>';
+        info.querySelector('.name').textContent = o.customer_name;
+        const d = new Date(o.created_at);
+        info.querySelector('.time').textContent = (d.getMonth() + 1) + '/' + d.getDate() + ' ' +
+          String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ' 주문';
+        const badge = info.querySelector('.status-badge');
+        badge.textContent = o.status;
+        badge.classList.add('status-' + o.status);
+        info.querySelector('.order-lines').textContent = lines.join(' · ');
+        info.querySelector('.order-total').textContent = '합계 ' + Number(o.total_price).toLocaleString('ko-KR') + '원';
+        info.querySelector('.order-meta').textContent =
+          '📞 ' + formatPhone(o.phone) +
+          (o.email ? ' · ✉️ ' + o.email : '') +
+          (o.address ? ' · 📦 ' + o.address : '') +
+          (o.note ? ' · 📝 ' + o.note : '');
+
+        const controls = document.createElement('div');
+        controls.className = 'booking-controls';
+        const sel = document.createElement('select');
+        sel.className = 'status-select';
+        ORDER_STATUSES.forEach(function (st) {
+          const opt = document.createElement('option');
+          opt.value = st;
+          opt.textContent = st;
+          if (st === o.status) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        sel.addEventListener('change', async function () {
+          sel.disabled = true;
+          try {
+            const res = await api('/orders?id=eq.' + o.id, {
+              method: 'PATCH',
+              headers: { 'Prefer': 'return=minimal' },
+              body: JSON.stringify({ status: sel.value })
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            o.status = sel.value;
+          } catch (err) {
+            if (err.message === 'NO_SESSION') { showLogin(); return; }
+            alert('⚠️ 주문 상태 변경이 저장되지 않았습니다. 다시 시도해 주세요.');
+          } finally {
+            await loadOrders();
+          }
+        });
+        controls.appendChild(sel);
+
+        card.appendChild(info);
+        card.appendChild(controls);
+        orderListEl.appendChild(card);
+      });
     }
 
     // ── 시작: 세션 있으면 바로 관리 화면 ──
