@@ -103,6 +103,33 @@
     .btn-login:hover:not(:disabled) { background: #a95f2f; }
     .btn-login:disabled { opacity: 0.6; cursor: wait; }
 
+    /* ── 메인 탭 (예약/주문) ── */
+    .main-tabs {
+      display: flex;
+      gap: 8px;
+      max-width: 640px;
+      margin: 20px auto 0;
+      padding: 0 24px;
+    }
+    .main-tab {
+      flex: 1;
+      padding: 12px 0;
+      border: 1.5px solid #e8ddd0;
+      border-radius: 12px;
+      background: #fff;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #8a7a6e;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .main-tab.active {
+      background: #5c3d2e;
+      border-color: #5c3d2e;
+      color: #fff;
+    }
+
     /* ── Section ── */
     section { padding: 36px 24px; max-width: 640px; margin: 0 auto; }
     .list-title {
@@ -259,22 +286,31 @@
 
   <!-- ══ 관리 화면 (로그인 후) ══ -->
   <div id="adminView" hidden>
-    <section>
-      <h2 class="list-title">예약 목록</h2>
-      <div class="date-tabs" id="bookingTabs"></div>
-      <div class="list-area" id="bookingList"></div>
-    </section>
+    <div class="main-tabs">
+      <button type="button" class="main-tab active" id="tabBtnReserve">☕ 예약</button>
+      <button type="button" class="main-tab" id="tabBtnOrders">🛒 주문</button>
+    </div>
 
-    <section style="padding-top: 0;">
-      <h2 class="list-title">완료 항목</h2>
-      <div class="date-tabs" id="doneTabs"></div>
-      <div class="list-area" id="doneList"></div>
-    </section>
+    <div id="tabReserve">
+      <section>
+        <h2 class="list-title">예약 목록</h2>
+        <div class="date-tabs" id="bookingTabs"></div>
+        <div class="list-area" id="bookingList"></div>
+      </section>
 
-    <section style="padding-top: 0;">
-      <h2 class="list-title">🛒 주문 (상점)</h2>
-      <div class="list-area" id="orderList"></div>
-    </section>
+      <section style="padding-top: 0;">
+        <h2 class="list-title">완료 항목</h2>
+        <div class="date-tabs" id="doneTabs"></div>
+        <div class="list-area" id="doneList"></div>
+      </section>
+    </div>
+
+    <div id="tabOrders" hidden>
+      <section>
+        <h2 class="list-title">주문 목록</h2>
+        <div class="list-area" id="orderList"></div>
+      </section>
+    </div>
   </div>
 
   <footer>
@@ -645,6 +681,21 @@
         orderListEl.appendChild(card);
       });
     }
+
+    // ══ 메인 탭 전환 (예약/주문) ══
+    const tabBtnReserve = document.getElementById('tabBtnReserve');
+    const tabBtnOrders = document.getElementById('tabBtnOrders');
+    const tabReserve = document.getElementById('tabReserve');
+    const tabOrders = document.getElementById('tabOrders');
+    function switchTab(which) {
+      const isReserve = which === 'reserve';
+      tabReserve.hidden = !isReserve;
+      tabOrders.hidden = isReserve;
+      tabBtnReserve.classList.toggle('active', isReserve);
+      tabBtnOrders.classList.toggle('active', !isReserve);
+    }
+    tabBtnReserve.addEventListener('click', function () { switchTab('reserve'); });
+    tabBtnOrders.addEventListener('click', function () { switchTab('orders'); });
 
     // ── 시작: 세션 있으면 바로 관리 화면 ──
     if (getSession()) showAdmin();

@@ -55,6 +55,26 @@ const ORDERS = [
   await page.click('#loginBtn');
   await page.waitForTimeout(700);
 
+  // 주문 탭으로 전환 (예약/주문 탭 구조)
+  await page.click('#tabBtnOrders');
+  await page.waitForTimeout(200);
+
+  // ══ D0: 탭 전환 — 주문 탭에서 예약 섹션 숨김, 반대도 성립 ══
+  const d0a = await page.evaluate(() => ({
+    ordersVisible: !document.getElementById('tabOrders').hidden,
+    reserveHidden: document.getElementById('tabReserve').hidden,
+  }));
+  await page.click('#tabBtnReserve');
+  await page.waitForTimeout(200);
+  const d0b = await page.evaluate(() => ({
+    reserveVisible: !document.getElementById('tabReserve').hidden,
+    ordersHidden: document.getElementById('tabOrders').hidden,
+  }));
+  await page.click('#tabBtnOrders');
+  await page.waitForTimeout(200);
+  log('D0 예약/주문 탭 전환', d0a.ordersVisible && d0a.reserveHidden && d0b.reserveVisible && d0b.ordersHidden,
+    JSON.stringify({ d0a, d0b }));
+
   // ══ D1: 주문 섹션 렌더 — JWT 조회 + 사장에겐 전체 정보 표시 ══
   const d1 = await page.evaluate(() => {
     const cards = document.querySelectorAll('#orderList .booking-card');
