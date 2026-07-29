@@ -821,7 +821,7 @@
       <div class="field-row">
         <div class="field">
           <label for="name">이름 <span class="required-mark">*</span></label>
-          <input type="text" id="name" placeholder="김테스트">
+          <input type="text" id="name" placeholder="김테스트" maxlength="20">
           <p class="error-text" id="nameError">이름을 입력해 주세요.</p>
         </div>
         <div class="field">
@@ -867,7 +867,7 @@
       </div>
       <div class="field">
         <label for="note">요청사항 <span class="optional">(선택)</span></label>
-        <textarea id="note" placeholder="예: 얼음 적게, 봉투에 담아주세요"></textarea>
+        <textarea id="note" maxlength="200" placeholder="예: 얼음 적게, 봉투에 담아주세요"></textarea>
       </div>
 
       <!-- 개인정보 수집 동의 -->
@@ -899,7 +899,7 @@
       <div class="field-row">
         <div class="field">
           <label for="lookupName">이름</label>
-          <input type="text" id="lookupName" placeholder="예약자 이름">
+          <input type="text" id="lookupName" placeholder="예약자 이름" maxlength="20">
         </div>
         <div class="field">
           <label for="lookupPhone">연락처</label>
@@ -928,7 +928,7 @@
       <div class="form-alert" id="orderAlert"></div>
       <div class="field">
         <label for="odName">이름 <span class="required-mark">*</span></label>
-        <input type="text" id="odName" placeholder="주문자 이름">
+        <input type="text" id="odName" placeholder="주문자 이름" maxlength="20">
       </div>
       <div class="field">
         <label for="odPhone">연락처 <span class="required-mark">*</span></label>
@@ -936,15 +936,15 @@
       </div>
       <div class="field">
         <label for="odEmail">이메일 <span class="optional">(선택)</span></label>
-        <input type="email" id="odEmail" placeholder="you@example.com">
+        <input type="email" id="odEmail" placeholder="you@example.com" maxlength="60">
       </div>
       <div class="field">
         <label for="odAddress">받을 주소 <span class="optional">(선택 — 픽업이면 비워두세요)</span></label>
-        <input type="text" id="odAddress" placeholder="배송 받을 주소">
+        <input type="text" id="odAddress" placeholder="배송 받을 주소" maxlength="80">
       </div>
       <div class="field">
         <label for="odNote">요청사항 <span class="optional">(선택)</span></label>
-        <textarea id="odNote" placeholder="예) 원두는 굵게 갈아주세요"></textarea>
+        <textarea id="odNote" maxlength="200" placeholder="예) 원두는 굵게 갈아주세요"></textarea>
       </div>
       <button type="button" class="btn-submit" id="orderBtn">🛒 주문하기</button>
       <div class="order-success" id="orderSuccess"></div>
@@ -1380,6 +1380,7 @@
       { id: 'dripbag', name: '드립백 세트(10개입)',            desc: '사무실에서 즐기는 모닝브루', price: 15000 }
     ];
     const cart = []; // {id, name, price, qty}
+    const MAX_QTY_PER_ITEM = 10; // 품목당 주문 상한 (Day 18 버그 사냥 반영)
 
     const productGrid = document.getElementById('productGrid');
     const cartArea = document.getElementById('cartArea');
@@ -1404,8 +1405,15 @@
       card.querySelector('.price').textContent = won(p.price);
       card.querySelector('.btn-add').addEventListener('click', function () {
         const found = cart.find(function (c) { return c.id === p.id; });
-        if (found) found.qty += 1;
+        if (found) {
+          if (found.qty >= MAX_QTY_PER_ITEM) {
+            showOrderAlert('같은 상품은 한 번에 ' + MAX_QTY_PER_ITEM + '개까지 주문할 수 있어요. 더 필요하시면 요청사항에 적어주세요.');
+            return;
+          }
+          found.qty += 1;
+        }
         else cart.push({ id: p.id, name: p.name, price: p.price, qty: 1 });
+        orderAlert.classList.remove('show');
         renderCart();
       });
       productGrid.appendChild(card);
@@ -1435,7 +1443,15 @@
           if (c.qty <= 0) cart.splice(cart.indexOf(c), 1);
           renderCart();
         });
-        row.querySelector('.qplus').addEventListener('click', function () { c.qty += 1; renderCart(); });
+        row.querySelector('.qplus').addEventListener('click', function () {
+          if (c.qty >= MAX_QTY_PER_ITEM) {
+            showOrderAlert('같은 상품은 한 번에 ' + MAX_QTY_PER_ITEM + '개까지 주문할 수 있어요. 더 필요하시면 요청사항에 적어주세요.');
+            return;
+          }
+          c.qty += 1;
+          orderAlert.classList.remove('show');
+          renderCart();
+        });
         row.querySelector('.cdel').addEventListener('click', function () {
           cart.splice(cart.indexOf(c), 1);
           renderCart();
@@ -1472,6 +1488,11 @@
       const pd = phoneDigits(odPhone.value);
       if (!nm || pd.length < 10) {
         showOrderAlert('이름과 연락처를 입력해주세요. 연락처는 숫자 10~11자리로 적어주시면 됩니다.');
+        return;
+      }
+      const em = document.getElementById('odEmail').value.trim();
+      if (em && !/^\S+@\S+\.\S+$/.test(em)) {
+        showOrderAlert('이메일 형식을 확인해주세요. (예: name@example.com) 이메일이 없으면 비워두셔도 됩니다.');
         return;
       }
 
