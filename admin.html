@@ -224,6 +224,21 @@
     .order-lines { font-size: 0.85rem; color: #6b5b50; margin-top: 2px; }
     .order-meta { font-size: 0.8rem; color: #a08a70; margin-top: 4px; line-height: 1.5; }
     .order-total { font-weight: 700; color: #a06030; font-size: 0.9rem; margin-top: 4px; }
+    .menu-group-title { font-size: 0.85rem; font-weight: 700; color: #a08a70; margin: 8px 0 2px; }
+    .btn-toggle {
+      border: 1.5px solid #e8ddd0;
+      background: #fffdfa;
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      color: #c0504d;
+      width: 96px;
+    }
+    .btn-toggle.resume { color: #3a7a3a; }
+    .btn-toggle:disabled { opacity: 0.5; cursor: wait; }
 
     .booking-controls {
       display: flex;
@@ -289,6 +304,7 @@
     <div class="main-tabs">
       <button type="button" class="main-tab active" id="tabBtnReserve">☕ 예약</button>
       <button type="button" class="main-tab" id="tabBtnOrders">🛒 주문</button>
+      <button type="button" class="main-tab" id="tabBtnMenus">📋 메뉴</button>
     </div>
 
     <div id="tabReserve">
@@ -309,6 +325,13 @@
       <section>
         <h2 class="list-title">주문 목록</h2>
         <div class="list-area" id="orderList"></div>
+      </section>
+    </div>
+
+    <div id="tabMenus" hidden>
+      <section>
+        <h2 class="list-title">메뉴 관리 — 품절 토글</h2>
+        <div class="list-area" id="menuList"></div>
       </section>
     </div>
   </div>
@@ -416,6 +439,7 @@
       logoutBtn.hidden = false;
       await loadAndRender();
       await loadOrders();
+      await loadMenus();
     }
 
     // ── 로그인 폼 ──
@@ -441,7 +465,7 @@
     });
 
     logoutBtn.addEventListener('click', showLogin);
-    refreshBtn.addEventListener('click', function () { loadAndRender(); loadOrders(); });
+    refreshBtn.addEventListener('click', function () { loadAndRender(); loadOrders(); loadMenus(); });
 
     // ── [R] 서버에서 예약 읽기 ──
     let bookings = [];
@@ -687,15 +711,89 @@
     const tabBtnOrders = document.getElementById('tabBtnOrders');
     const tabReserve = document.getElementById('tabReserve');
     const tabOrders = document.getElementById('tabOrders');
+    const tabBtnMenus = document.getElementById('tabBtnMenus');
+    const tabMenus = document.getElementById('tabMenus');
     function switchTab(which) {
-      const isReserve = which === 'reserve';
-      tabReserve.hidden = !isReserve;
-      tabOrders.hidden = isReserve;
-      tabBtnReserve.classList.toggle('active', isReserve);
-      tabBtnOrders.classList.toggle('active', !isReserve);
+      tabReserve.hidden = which !== 'reserve';
+      tabOrders.hidden = which !== 'orders';
+      tabMenus.hidden = which !== 'menus';
+      tabBtnReserve.classList.toggle('active', which === 'reserve');
+      tabBtnOrders.classList.toggle('active', which === 'orders');
+      tabBtnMenus.classList.toggle('active', which === 'menus');
     }
     tabBtnReserve.addEventListener('click', function () { switchTab('reserve'); });
     tabBtnOrders.addEventListener('click', function () { switchTab('orders'); });
+    tabBtnMenus.addEventListener('click', function () { switchTab('menus'); });
+
+    // ══ 메뉴 관리 (M2) — 품절 토글: soldout 컬럼만 수정 가능 ══
+    const menuListEl = document.getElementById('menuList');
+    const CATEGORY_LABEL = { pickup: '☕ 픽업 메뉴 (예약 폼)', product: '🛒 상점 상품' };
+
+    async function loadMenus() {
+      try {
+        const res = await api('/menus?select=*&order=category.asc,sort_order.asc');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        renderMenus(await res.json());
+      } catch (err) {
+        if (err.message === 'NO_SESSION') { showLogin(); return; }
+        menuListEl.innerHTML = '<div class="empty-state"><span class="emoji">⚠️</span>메뉴를 불러오지 못했어요.<br>(menus 테이블 SQL 실행 전이면 이 상태가 정상)</div>';
+      }
+    }
+
+    function renderMenus(menus) {
+      menuListEl.innerHTML = '';
+      if (menus.length === 0) {
+        menuListEl.innerHTML = '<div class="empty-state"><span class="emoji">📋</span>등록된 메뉴가 없어요 — Table Editor에서 추가해 주세요.</div>';
+        return;
+      }
+      let lastCat = null;
+      menus.forEach(function (mn) {
+        if (mn.category !== lastCat) {
+          lastCat = mn.category;
+          const gt = document.createElement('div');
+          gt.className = 'menu-group-title';
+          gt.textContent = CATEGORY_LABEL[mn.category] || mn.category;
+          menuListEl.appendChild(gt);
+        }
+        const card = document.createElement('div');
+        card.className = 'booking-card';
+        const info = document.createElement('div');
+        info.className = 'booking-info';
+        info.innerHTML = '<div class="top"><span class="name"></span><span class="status-badge"></span></div><div class="menu"></div>';
+        info.querySelector('.name').textContent = (mn.emoji ? mn.emoji + ' ' : '') + mn.title;
+        const badge = info.querySelector('.status-badge');
+        badge.textContent = mn.soldout ? '품절' : '판매중';
+        badge.classList.add(mn.soldout ? 'status-취소' : 'status-확정');
+        info.querySelector('.menu').textContent = Number(mn.price).toLocaleString('ko-KR') + '원' + (mn.description ? ' · ' + mn.description : '');
+
+        const controls = document.createElement('div');
+        controls.className = 'booking-controls';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn-toggle' + (mn.soldout ? ' resume' : '');
+        btn.textContent = mn.soldout ? '판매 재개' : '품절 처리';
+        btn.addEventListener('click', async function () {
+          btn.disabled = true;
+          try {
+            const res = await api('/menus?id=eq.' + encodeURIComponent(mn.id), {
+              method: 'PATCH',
+              headers: { 'Prefer': 'return=minimal' },
+              body: JSON.stringify({ soldout: !mn.soldout })
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+          } catch (err) {
+            if (err.message === 'NO_SESSION') { showLogin(); return; }
+            alert('⚠️ 품절 상태 변경이 저장되지 않았습니다. 다시 시도해 주세요.');
+          } finally {
+            await loadMenus();
+          }
+        });
+        controls.appendChild(btn);
+        card.appendChild(info);
+        card.appendChild(controls);
+        menuListEl.appendChild(card);
+      });
+    }
 
     // ── 시작: 세션 있으면 바로 관리 화면 ──
     if (getSession()) showAdmin();

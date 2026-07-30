@@ -619,6 +619,18 @@
 
     /* ── 상점 (Day 17) ── */
     .product-card .desc-text { font-size: 0.8rem; color: #a08a70; margin: 2px 0 8px; }
+    .product-card.soldout { opacity: 0.55; }
+    .soldout-badge {
+      display: inline-block;
+      background: #fdeeee;
+      color: #c0504d;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      margin-left: 6px;
+    }
+    .btn-add:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-add {
       margin-top: 6px;
       background: #fdf8ee;
@@ -1374,10 +1386,11 @@
 
     // ══════════════ 모닝브루 상점 (Day 17) — 주문 접수 흐름 ══════════════
     // 상품은 코드 안 배열로 시작 (교재 팁) — Day 18 M2에서 menus 테이블로 승격 예정
-    const PRODUCTS = [
-      { id: 'beans',   name: '에티오피아 예가체프 원두(200g)', desc: '아침에 볶은 싱글 오리진', price: 18000 },
-      { id: 'scone',   name: '수제 버터 스콘 4개입',           desc: '매일 아침 굽는 그 스콘',   price: 12000 },
-      { id: 'dripbag', name: '드립백 세트(10개입)',            desc: '사무실에서 즐기는 모닝브루', price: 15000 }
+    // 상품은 서버(menus 테이블)가 진실 — 실패 시 아래 폴백 배열 (Day 19 M2)
+    const FALLBACK_PRODUCTS = [
+      { id: 'beans',   name: '에티오피아 예가체프 원두(200g)', desc: '아침에 볶은 싱글 오리진', price: 18000, soldout: false },
+      { id: 'scone',   name: '수제 버터 스콘 4개입',           desc: '매일 아침 굽는 그 스콘',   price: 12000, soldout: false },
+      { id: 'dripbag', name: '드립백 세트(10개입)',            desc: '사무실에서 즐기는 모닝브루', price: 15000, soldout: false }
     ];
     const cart = []; // {id, name, price, qty}
     const MAX_QTY_PER_ITEM = 10; // 품목당 주문 상한 (Day 18 버그 사냥 반영)
@@ -1392,32 +1405,82 @@
 
     function won(n) { return n.toLocaleString('ko-KR') + '원'; }
 
-    PRODUCTS.forEach(function (p) {
-      const card = document.createElement('div');
-      card.className = 'menu-card product-card';
-      card.innerHTML =
-        '<div class="name"></div>' +
-        '<div class="desc-text"></div>' +
-        '<div class="price"></div>' +
-        '<button type="button" class="btn-add">담기</button>';
-      card.querySelector('.name').textContent = p.name;
-      card.querySelector('.desc-text').textContent = p.desc;
-      card.querySelector('.price').textContent = won(p.price);
-      card.querySelector('.btn-add').addEventListener('click', function () {
-        const found = cart.find(function (c) { return c.id === p.id; });
-        if (found) {
-          if (found.qty >= MAX_QTY_PER_ITEM) {
-            showOrderAlert('같은 상품은 한 번에 ' + MAX_QTY_PER_ITEM + '개까지 주문할 수 있어요. 더 필요하시면 요청사항에 적어주세요.');
-            return;
-          }
-          found.qty += 1;
+    function renderProducts(list) {
+      productGrid.innerHTML = '';
+      list.forEach(function (p) {
+        const card = document.createElement('div');
+        card.className = 'menu-card product-card' + (p.soldout ? ' soldout' : '');
+        card.innerHTML =
+          '<div class="name"></div>' +
+          '<div class="desc-text"></div>' +
+          '<div class="price"></div>' +
+          '<button type="button" class="btn-add"></button>';
+        card.querySelector('.name').textContent = p.name;
+        if (p.soldout) {
+          const badge = document.createElement('span');
+          badge.className = 'soldout-badge';
+          badge.textContent = '품절';
+          card.querySelector('.name').appendChild(badge);
         }
-        else cart.push({ id: p.id, name: p.name, price: p.price, qty: 1 });
-        orderAlert.classList.remove('show');
-        renderCart();
+        card.querySelector('.desc-text').textContent = p.desc || '';
+        card.querySelector('.price').textContent = won(p.price);
+        const btn = card.querySelector('.btn-add');
+        btn.textContent = p.soldout ? '품절' : '담기';
+        btn.disabled = p.soldout;
+        btn.addEventListener('click', function () {
+          const found = cart.find(function (c) { return c.id === p.id; });
+          if (found) {
+            if (found.qty >= MAX_QTY_PER_ITEM) {
+              showOrderAlert('같은 상품은 한 번에 ' + MAX_QTY_PER_ITEM + '개까지 주문할 수 있어요. 더 필요하시면 요청사항에 적어주세요.');
+              return;
+            }
+            found.qty += 1;
+          }
+          else cart.push({ id: p.id, name: p.name, price: p.price, qty: 1 });
+          orderAlert.classList.remove('show');
+          renderCart();
+        });
+        productGrid.appendChild(card);
       });
-      productGrid.appendChild(card);
-    });
+    }
+
+    // 상점 상품: 서버가 진실 (menus.category = product) — 실패·빈 응답 시 폴백
+    async function loadProducts() {
+      try {
+        const res = await fetch(API + '/menus?category=eq.product&order=sort_order.asc', { headers: HEADERS });
+        if (!res.ok) throw new Error('menus HTTP ' + res.status);
+        const rows = await res.json();
+        if (!rows.length) throw new Error('menus empty');
+        renderProducts(rows.map(function (r) {
+          return { id: r.id, name: r.title, desc: r.description, price: r.price, soldout: r.soldout };
+        }));
+      } catch (e) {
+        renderProducts(FALLBACK_PRODUCTS);
+      }
+    }
+    loadProducts();
+
+    // 예약 폼 픽업 메뉴: 서버가 진실 (menus.category = pickup) — 실패 시 하드코딩 옵션 유지
+    async function loadPickupMenu() {
+      try {
+        const res = await fetch(API + '/menus?category=eq.pickup&order=sort_order.asc', { headers: HEADERS });
+        if (!res.ok) throw new Error('menus HTTP ' + res.status);
+        const rows = await res.json();
+        if (!rows.length) throw new Error('menus empty');
+        const sel = document.getElementById('menu');
+        sel.innerHTML = '';
+        rows.forEach(function (r) {
+          const opt = document.createElement('option');
+          opt.value = r.title + ' (' + r.price.toLocaleString('ko-KR') + '원)';
+          opt.textContent = (r.emoji ? r.emoji + ' ' : '') + opt.value + (r.soldout ? ' — 품절' : '');
+          opt.disabled = r.soldout;
+          sel.appendChild(opt);
+        });
+        const firstOk = Array.prototype.find.call(sel.options, function (o) { return !o.disabled; });
+        if (firstOk) sel.value = firstOk.value;
+      } catch (e) { /* 폴백: HTML 하드코딩 옵션 그대로 */ }
+    }
+    loadPickupMenu();
 
     function renderCart() {
       cartArea.innerHTML = '';
