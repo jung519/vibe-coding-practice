@@ -2,7 +2,7 @@
 // 사용: node tests/day13-check.js [관리자 페이지 URL]
 const { chromium } = require('playwright-core');
 
-const ADMIN = process.argv[2] || 'file:///Users/junghyun/Project/kaist/day1/admin.html';
+const ADMIN = process.argv[2] || 'file:///Users/junghyun/Project/kaist/7월/day1/admin.html';
 const SB = 'https://vffoydlxftzykupsqlnp.supabase.co';
 
 const results = [];

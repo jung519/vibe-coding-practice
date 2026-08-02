@@ -13,15 +13,16 @@ overedge-preassignment.md
 # Claude Code 로컬 설정
 .claude/settings.local.json
 
-# 교재 캡처 이미지 (저작권 — 공개 저장소 제외)
+# 교재 캡처 이미지 (저작권 — 공개 저장소 제외). 폴더 재구성으로 7월/ 하위 포함
 day*/*.png
+7월/day*/*.png
 
 # teachme 스킬 산출물 (자체 git 이력 보유 — 중첩 저장소라 제외)
-day4/sqlite-handbook/
+7월/day4/sqlite-handbook/
 
 # Python 가상환경
 .venv/
 
 # 공유용 대표 화면 캡처는 포함 (우리 사이트 — 교재 이미지 아님)
-!day19/공유캡처_*.png
+!7월/day19/공유캡처_*.png
 !Final_Submission/*.png

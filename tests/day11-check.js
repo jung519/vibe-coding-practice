@@ -4,7 +4,7 @@
 // (실서버 검증은 별도 라이브 테스트 5건으로 수행)
 const { chromium } = require('playwright-core');
 
-const CUSTOMER = process.argv[2] || 'file:///Users/junghyun/Project/kaist/day1/index.html';
+const CUSTOMER = process.argv[2] || 'file:///Users/junghyun/Project/kaist/7월/day1/index.html';
 const ADMIN = CUSTOMER.replace(/[^/]*$/, 'admin.html');
 const SB = 'https://vffoydlxftzykupsqlnp.supabase.co';
 

@@ -2,7 +2,7 @@
 // 사용: node tests/day4-check.js [고객페이지 URL]  (관리자 URL은 같은 폴더 admin.html로 유도)
 const { chromium } = require('playwright-core');
 
-const CUSTOMER = process.argv[2] || 'file:///Users/junghyun/Project/kaist/day4/B-04-O1.html';
+const CUSTOMER = process.argv[2] || 'file:///Users/junghyun/Project/kaist/7월/day4/B-04-O1.html';
 const ADMIN = CUSTOMER.replace(/[^/]*$/, 'admin.html');
 const KEY = 'morningbrew.bookings';
 

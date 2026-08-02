@@ -3,7 +3,7 @@
 // ⚠️ 실서버에 실습용 가짜 데이터가 저장된다 (사장님이 Table Editor에서 확인·정리)
 const { chromium } = require('playwright-core');
 
-const CUSTOMER = process.argv[2] || 'file:///Users/junghyun/Project/kaist/day1/index.html';
+const CUSTOMER = process.argv[2] || 'file:///Users/junghyun/Project/kaist/7월/day1/index.html';
 const SB = 'https://vffoydlxftzykupsqlnp.supabase.co';
 const KEY = 'sb_publishable_D-4Y6feEhZNnKDwmTuCqEw_ZyFVu5nf';
 const H = { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' };

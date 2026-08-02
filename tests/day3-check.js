@@ -1,8 +1,8 @@
 // Day3 체크리스트 자동 점검 — B-03-O1 / B-03-O2 (375px 모바일 뷰포트)
 const { chromium } = require('playwright-core');
 
-const O1 = 'file:///Users/junghyun/Project/kaist/day3/B-03-O1.html';
-const O2 = 'file:///Users/junghyun/Project/kaist/day1/index.html'; // 통합 페이지(소개+예약) 검증
+const O1 = 'file:///Users/junghyun/Project/kaist/7월/day3/B-03-O1.html';
+const O2 = 'file:///Users/junghyun/Project/kaist/7월/day1/index.html'; // 통합 페이지(소개+예약) 검증
 const SHOT_DIR = __dirname;
 
 const results = [];
